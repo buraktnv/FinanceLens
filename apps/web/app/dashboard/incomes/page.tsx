@@ -112,11 +112,11 @@ export default function IncomesPage() {
             </TableHeader>
             <TableBody>
               {mockIncomes.map((income) => {
-                const typeInfo = incomeTypes[income.type] || incomeTypes.OTHER;
+                const typeInfo = incomeTypes[income.type] ?? incomeTypes.OTHER!;
                 return (
                   <TableRow key={income.id}>
                     <TableCell>
-                      <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
+                      <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
                     </TableCell>
                     <TableCell>{income.description}</TableCell>
                     <TableCell className="text-right font-medium text-green-600">
@@ -145,10 +145,10 @@ export default function IncomesPage() {
 }
 
 function IncomeTypeCard({ type, amount }: { type: string; amount: number }) {
-  const typeInfo = incomeTypes[type] || incomeTypes.OTHER;
+  const typeInfo = incomeTypes[type] ?? incomeTypes.OTHER!;
   return (
     <div className="p-4 bg-gray-50 rounded-lg text-center">
-      <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
+      <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
       <p className="text-xl font-bold mt-2">₺{amount.toLocaleString()}</p>
     </div>
   );

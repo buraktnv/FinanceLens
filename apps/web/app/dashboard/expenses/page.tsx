@@ -100,13 +100,13 @@ export default function ExpensesPage() {
             {Object.entries(byCategory)
               .sort(([, a], [, b]) => b - a)
               .map(([category, amount]) => {
-                const categoryInfo = expenseCategories[category] || expenseCategories.OTHER;
+                const categoryInfo = expenseCategories[category] ?? expenseCategories.OTHER!;
                 const percentage = ((amount / totalThisMonth) * 100).toFixed(1);
                 return (
                   <div key={category} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge className={categoryInfo.color}>{categoryInfo.label}</Badge>
+                        <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
                         <span className="text-sm text-muted-foreground">{percentage}%</span>
                       </div>
                       <span className="font-medium">₺{amount.toLocaleString()}</span>
@@ -144,11 +144,11 @@ export default function ExpensesPage() {
             </TableHeader>
             <TableBody>
               {mockExpenses.map((expense) => {
-                const categoryInfo = expenseCategories[expense.category] || expenseCategories.OTHER;
+                const categoryInfo = expenseCategories[expense.category] ?? expenseCategories.OTHER!;
                 return (
                   <TableRow key={expense.id}>
                     <TableCell>
-                      <Badge className={categoryInfo.color}>{categoryInfo.label}</Badge>
+                      <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
                     </TableCell>
                     <TableCell>{expense.description}</TableCell>
                     <TableCell className="text-right font-medium text-red-600">
