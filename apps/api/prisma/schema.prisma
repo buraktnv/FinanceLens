@@ -1,0 +1,464 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Currency {
+  TRY // Turkish Lira
+  USD // US Dollar
+  EUR // Euro
+  GBP // British Pound
+  CHF // Swiss Franc
+  JPY // Japanese Yen
+  AUD // Australian Dollar
+  CAD // Canadian Dollar
+  CNY // Chinese Yuan
+  SEK // Swedish Krona
+  NOK // Norwegian Krone
+  DKK // Danish Krone
+  RUB // Russian Ruble
+  AED // UAE Dirham
+  SAR // Saudi Riyal
+  KWD // Kuwaiti Dinar
+  QAR // Qatari Riyal
+  SGD // Singapore Dollar
+  HKD // Hong Kong Dollar
+  INR // Indian Rupee
+  KRW // South Korean Won
+  PLN // Polish Zloty
+  CZK // Czech Koruna
+  HUF // Hungarian Forint
+  RON // Romanian Leu
+  BGN // Bulgarian Lev
+  GEL // Georgian Lari
+  AZN // Azerbaijani Manat
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+enum IncomeType {
+  SALARY
+  RENTAL
+  DIVIDEND
+  INTEREST
+  BONUS
+  FREELANCE
+  GIFT
+  REFUND
+  SALE
+  OTHER
+}
+
+enum ExpenseCategory {
+  // Housing
+  RENT
+  MORTGAGE_PAYMENT
+  UTILITIES
+  INTERNET
+  PHONE
+  MAINTENANCE
+  INSURANCE
+  HOA_FEE
+  PROPERTY_TAX
+  // Transportation
+  TRANSPORTATION
+  FUEL
+  CAR_PAYMENT
+  CAR_INSURANCE
+  CAR_MAINTENANCE
+  PARKING
+  // Daily
+  GROCERIES
+  DINING
+  COFFEE
+  // Living
+  HEALTHCARE
+  EDUCATION
+  ENTERTAINMENT
+  SHOPPING
+  CLOTHING
+  PERSONAL_CARE
+  GYM
+  SUBSCRIPTIONS
+  // Other
+  TRAVEL
+  GIFTS
+  DONATIONS
+  TAXES
+  FEES
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  MOBILE_PAYMENT
+  CRYPTO
+  OTHER
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+  PARKING
+  WAREHOUSE
+  OTHER
+}
+
+enum LoanType {
+  MORTGAGE
+  AUTO
+  PERSONAL
+  EDUCATION
+  BUSINESS
+  CREDIT_CARD
+  OTHER
+}
+
+enum LoanStatus {
+  ACTIVE
+  CLOSED
+  CLOSED_EARLY
+  DEFAULTED
+}
+
+enum PaymentType {
+  REGULAR
+  EARLY
+  EXTRA
+  FINAL
+}
+
+enum DistributionType {
+  DIVIDEND
+  CAPITAL_GAIN
+  RETURN_OF_CAPITAL
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  name            String?
+  defaultCurrency Currency @default(TRY)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  stocks     Stock[]
+  eurobonds  Eurobond[]
+  etfs       ETF[]
+  incomes    Income[]
+  expenses   Expense[]
+  properties Property[]
+  loans      Loan[]
+}
+
+model Stock {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  symbol        String
+  name          String
+  quantity      Decimal  @db.Decimal(18, 8)
+  purchasePrice Decimal  @db.Decimal(18, 4)
+  currency      Currency @default(TRY)
+  purchaseDate  DateTime
+  broker        String?
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  dividends Dividend[]
+
+  @@index([userId])
+  @@index([symbol])
+}
+
+model Dividend {
+  id          String   @id @default(uuid())
+  stockId     String
+  stock       Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  amount      Decimal  @db.Decimal(18, 4)
+  currency    Currency
+  paymentDate DateTime
+  taxWithheld Decimal? @db.Decimal(18, 4)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stockId])
+}
+
+model Eurobond {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name            String
+  isin            String?
+  faceValue       Decimal  @db.Decimal(18, 4)
+  purchasePrice   Decimal  @db.Decimal(18, 4)
+  quantity        Decimal  @db.Decimal(18, 8)
+  couponRate      Decimal  @db.Decimal(5, 4)
+  currency        Currency @default(USD)
+  purchaseDate    DateTime
+  maturityDate    DateTime
+  couponFrequency Int      @default(2)
+  broker          String?
+  notes           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  couponPayments CouponPayment[]
+
+  @@index([userId])
+}
+
+model CouponPayment {
+  id          String   @id @default(uuid())
+  eurobondId  String
+  eurobond    Eurobond @relation(fields: [eurobondId], references: [id], onDelete: Cascade)
+
+  amount      Decimal  @db.Decimal(18, 4)
+  currency    Currency
+  paymentDate DateTime
+  taxWithheld Decimal? @db.Decimal(18, 4)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eurobondId])
+}
+
+model ETF {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  symbol        String
+  name          String
+  quantity      Decimal  @db.Decimal(18, 8)
+  purchasePrice Decimal  @db.Decimal(18, 4)
+  currency      Currency @default(USD)
+  purchaseDate  DateTime
+  expenseRatio  Decimal? @db.Decimal(5, 4)
+  broker        String?
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  distributions ETFDistribution[]
+
+  @@index([userId])
+  @@index([symbol])
+}
+
+model ETFDistribution {
+  id          String           @id @default(uuid())
+  etfId       String
+  etf         ETF              @relation(fields: [etfId], references: [id], onDelete: Cascade)
+
+  amount      Decimal          @db.Decimal(18, 4)
+  currency    Currency
+  paymentDate DateTime
+  taxWithheld Decimal?         @db.Decimal(18, 4)
+  type        DistributionType @default(DIVIDEND)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([etfId])
+}
+
+model Income {
+  id          String     @id @default(uuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount      Decimal    @db.Decimal(18, 4)
+  currency    Currency   @default(TRY)
+  type        IncomeType
+  description String?
+  date        DateTime
+  isRecurring Boolean    @default(false)
+  frequency   Frequency?
+  propertyId  String?
+  property    Property?  @relation(fields: [propertyId], references: [id])
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+  @@index([type])
+  @@index([propertyId])
+}
+
+model Property {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name           String
+  type           PropertyType
+  address        String?
+  city           String?
+  squareMeters   Decimal?     @db.Decimal(10, 2)
+
+  purchasePrice  Decimal?     @db.Decimal(18, 4)
+  purchaseDate   DateTime?
+  currentValue   Decimal?     @db.Decimal(18, 4)
+  currency       Currency     @default(TRY)
+
+  // Rental info
+  isRented       Boolean      @default(false)
+  monthlyRent    Decimal?     @db.Decimal(18, 4)
+  tenantName     String?
+  leaseStartDate DateTime?
+  leaseEndDate   DateTime?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  incomes  Income[]
+  expenses Expense[]
+  loan     Loan?
+
+  @@index([userId])
+}
+
+model Loan {
+  id               String     @id @default(uuid())
+  userId           String
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name             String
+  type             LoanType
+
+  principalAmount  Decimal    @db.Decimal(18, 4)
+  interestRate     Decimal    @db.Decimal(5, 4)
+  currency         Currency   @default(TRY)
+
+  startDate        DateTime
+  termMonths       Int
+  monthlyPayment   Decimal    @db.Decimal(18, 4)
+
+  remainingBalance Decimal?   @db.Decimal(18, 4)
+
+  // Early payment
+  earlyPaymentFee Decimal?   @db.Decimal(5, 4)
+  closedAt        DateTime?
+  status          LoanStatus @default(ACTIVE)
+
+  // Insurance
+  insuranceCost    Decimal? @db.Decimal(18, 4)
+  insuranceMonthly Decimal? @db.Decimal(18, 4)
+
+  // Link to asset
+  propertyId String?   @unique
+  property   Property? @relation(fields: [propertyId], references: [id])
+
+  bank  String?
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payments LoanPayment[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model LoanPayment {
+  id            String      @id @default(uuid())
+  loanId        String
+  loan          Loan        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  amount        Decimal     @db.Decimal(18, 4)
+  principalPaid Decimal?    @db.Decimal(18, 4)
+  interestPaid  Decimal?    @db.Decimal(18, 4)
+  paymentDate   DateTime
+  paymentNumber Int?
+  type          PaymentType @default(REGULAR)
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([loanId])
+  @@index([paymentDate])
+}
+
+model Expense {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount        Decimal         @db.Decimal(18, 4)
+  currency      Currency        @default(TRY)
+  category      ExpenseCategory
+  description   String?
+  date          DateTime
+  isRecurring   Boolean         @default(false)
+  frequency     Frequency?
+  paymentMethod PaymentMethod?
+
+  // Optional links
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+  @@index([category])
+  @@index([propertyId])
+}
