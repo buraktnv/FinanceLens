@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,18 +13,59 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, TrendingUp, TrendingDown } from "lucide-react";
-
-const mockStocks = [
-  { symbol: "THYAO", name: "Turk Hava Yollari", quantity: 500, avgPrice: 285.50, currentPrice: 312.40, currency: "TRY" },
-  { symbol: "AAPL", name: "Apple Inc.", quantity: 25, avgPrice: 175.00, currentPrice: 192.50, currency: "USD" },
-  { symbol: "GOOGL", name: "Alphabet Inc.", quantity: 10, avgPrice: 140.00, currentPrice: 155.20, currency: "USD" },
-  { symbol: "ASELS", name: "Aselsan", quantity: 200, avgPrice: 52.80, currentPrice: 48.90, currency: "TRY" },
-  { symbol: "MSFT", name: "Microsoft", quantity: 15, avgPrice: 380.00, currentPrice: 405.00, currency: "USD" },
-];
+import { Plus, Search, Loader2 } from "lucide-react";
+import { stocksApi } from "@/lib/api";
 
 export default function StocksPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: stocks = [], isLoading: stocksLoading, error: stocksError } = useQuery({
+    queryKey: ["stocks"],
+    queryFn: () => stocksApi.getAll(),
+  });
+
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["stocks", "summary"],
+    queryFn: () => stocksApi.getSummary(),
+  });
+
+  const isLoading = stocksLoading || summaryLoading;
+
+  const filteredStocks = stocks.filter(
+    (stock) =>
+      stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      stock.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const formatCurrency = (value: number, currency = "TRY") => {
+    const symbol = currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€";
+    return `${symbol}${value.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (stocksError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">
+          {stocksError instanceof Error ? stocksError.message : "Veri yuklenirken hata olustu"}
+        </p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Tekrar Dene
+        </Button>
+      </div>
+    );
+  }
+
+  const totalCost = summary?.totalCost ?? 0;
+  const totalDividends = summary?.totalDividends ?? 0;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -39,26 +84,26 @@ export default function StocksPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Deger</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Maliyet</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺485,230</div>
+            <div className="text-2xl font-bold">₺{totalCost.toLocaleString("tr-TR")}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Kar/Zarar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Temettu</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">+₺42,180</div>
+            <div className="text-2xl font-bold text-green-600">₺{totalDividends.toLocaleString("tr-TR")}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Getiri Orani</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Hisse Sayisi</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">+9.52%</div>
+            <div className="text-2xl font-bold">{summary?.totalStocks ?? 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -67,7 +112,12 @@ export default function StocksPage() {
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Hisse ara..." className="pl-10" />
+          <Input
+            placeholder="Hisse ara..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
@@ -78,48 +128,52 @@ export default function StocksPage() {
           <CardDescription>Tum hisse senetleriniz</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sembol</TableHead>
-                <TableHead>Sirket</TableHead>
-                <TableHead className="text-right">Adet</TableHead>
-                <TableHead className="text-right">Ort. Maliyet</TableHead>
-                <TableHead className="text-right">Guncel Fiyat</TableHead>
-                <TableHead className="text-right">Kar/Zarar</TableHead>
-                <TableHead className="text-right">Getiri</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockStocks.map((stock) => {
-                const totalCost = stock.quantity * stock.avgPrice;
-                const currentValue = stock.quantity * stock.currentPrice;
-                const profitLoss = currentValue - totalCost;
-                const profitLossPercent = ((profitLoss / totalCost) * 100).toFixed(2);
-                const isProfit = profitLoss >= 0;
-                const currencySymbol = stock.currency === "TRY" ? "₺" : "$";
+          {filteredStocks.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Sembol</TableHead>
+                  <TableHead>Sirket</TableHead>
+                  <TableHead className="text-right">Adet</TableHead>
+                  <TableHead className="text-right">Alis Fiyati</TableHead>
+                  <TableHead className="text-right">Toplam Maliyet</TableHead>
+                  <TableHead className="text-right">Alis Tarihi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStocks.map((stock) => {
+                  const quantity = Number(stock.quantity);
+                  const purchasePrice = Number(stock.purchasePrice);
+                  const totalCost = quantity * purchasePrice;
 
-                return (
-                  <TableRow key={stock.symbol}>
-                    <TableCell className="font-medium">{stock.symbol}</TableCell>
-                    <TableCell>{stock.name}</TableCell>
-                    <TableCell className="text-right">{stock.quantity}</TableCell>
-                    <TableCell className="text-right">{currencySymbol}{stock.avgPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{currencySymbol}{stock.currentPrice.toFixed(2)}</TableCell>
-                    <TableCell className={`text-right ${isProfit ? "text-green-600" : "text-red-600"}`}>
-                      {isProfit ? "+" : ""}{currencySymbol}{profitLoss.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant={isProfit ? "default" : "destructive"} className="gap-1">
-                        {isProfit ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {isProfit ? "+" : ""}{profitLossPercent}%
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow key={stock.id}>
+                      <TableCell className="font-medium">{stock.symbol}</TableCell>
+                      <TableCell>{stock.name}</TableCell>
+                      <TableCell className="text-right">{quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(purchasePrice, stock.currency)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(totalCost, stock.currency)}</TableCell>
+                      <TableCell className="text-right">
+                        {new Date(stock.purchaseDate).toLocaleDateString("tr-TR")}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                {searchTerm ? "Aramanizla eslesen hisse bulunamadi" : "Henuz hisse eklenmedi"}
+              </p>
+              {!searchTerm && (
+                <Button className="mt-4 gap-2">
+                  <Plus className="h-4 w-4" />
+                  Ilk Hissenizi Ekleyin
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

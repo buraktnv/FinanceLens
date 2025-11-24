@@ -1,3 +1,6 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,7 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Repeat } from "lucide-react";
+import { Plus, Repeat, Loader2 } from "lucide-react";
+import { incomesApi } from "@/lib/api";
 
 const incomeTypes: Record<string, { label: string; color: string }> = {
   SALARY: { label: "Maas", color: "bg-blue-100 text-blue-800" },
@@ -18,20 +22,60 @@ const incomeTypes: Record<string, { label: string; color: string }> = {
   INTEREST: { label: "Faiz", color: "bg-yellow-100 text-yellow-800" },
   FREELANCE: { label: "Serbest", color: "bg-orange-100 text-orange-800" },
   BONUS: { label: "Prim", color: "bg-pink-100 text-pink-800" },
+  GIFT: { label: "Hediye", color: "bg-teal-100 text-teal-800" },
+  REFUND: { label: "Iade", color: "bg-cyan-100 text-cyan-800" },
+  SALE: { label: "Satis", color: "bg-lime-100 text-lime-800" },
   OTHER: { label: "Diger", color: "bg-gray-100 text-gray-800" },
 };
 
-const mockIncomes = [
-  { id: 1, type: "SALARY", description: "Aylik Maas", amount: 45000, currency: "TRY", date: "2024-01-25", isRecurring: true, frequency: "MONTHLY" },
-  { id: 2, type: "RENTAL", description: "Kadikoy Daire Kirasi", amount: 15000, currency: "TRY", date: "2024-01-05", isRecurring: true, frequency: "MONTHLY" },
-  { id: 3, type: "DIVIDEND", description: "THYAO Temettu", amount: 2500, currency: "TRY", date: "2024-01-15", isRecurring: false },
-  { id: 4, type: "INTEREST", description: "Mevduat Faizi", amount: 1200, currency: "TRY", date: "2024-01-20", isRecurring: true, frequency: "MONTHLY" },
-  { id: 5, type: "FREELANCE", description: "Danismanlik Projesi", amount: 8000, currency: "TRY", date: "2024-01-10", isRecurring: false },
-];
+const frequencyLabels: Record<string, string> = {
+  DAILY: "Gunluk",
+  WEEKLY: "Haftalik",
+  BIWEEKLY: "2 Haftalik",
+  MONTHLY: "Aylik",
+  QUARTERLY: "3 Aylik",
+  SEMIANNUAL: "6 Aylik",
+  ANNUAL: "Yillik",
+};
 
 export default function IncomesPage() {
-  const totalMonthly = mockIncomes.filter(i => i.isRecurring).reduce((sum, i) => sum + i.amount, 0);
-  const totalThisMonth = mockIncomes.reduce((sum, i) => sum + i.amount, 0);
+  const { data: incomes = [], isLoading: incomesLoading, error: incomesError } = useQuery({
+    queryKey: ["incomes"],
+    queryFn: () => incomesApi.getAll(),
+  });
+
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["incomes", "summary"],
+    queryFn: () => incomesApi.getSummary(),
+  });
+
+  const isLoading = incomesLoading || summaryLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (incomesError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">
+          {incomesError instanceof Error ? incomesError.message : "Veri yuklenirken hata olustu"}
+        </p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Tekrar Dene
+        </Button>
+      </div>
+    );
+  }
+
+  const totalThisMonth = summary?.total ?? 0;
+  const totalRecurring = summary?.recurring ?? 0;
+  const incomeCount = summary?.count ?? incomes.length;
+  const byType = summary?.byType ?? {};
 
   return (
     <div className="space-y-6">
@@ -62,7 +106,7 @@ export default function IncomesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Duzenli Gelir</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{totalMonthly.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₺{totalRecurring.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Aylik tekrarlayan</p>
           </CardContent>
         </Card>
@@ -71,7 +115,7 @@ export default function IncomesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Gelir Kaynaklari</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockIncomes.length}</div>
+            <div className="text-2xl font-bold">{incomeCount}</div>
             <p className="text-xs text-muted-foreground">Aktif kaynak</p>
           </CardContent>
         </Card>
@@ -84,12 +128,15 @@ export default function IncomesPage() {
           <CardDescription>Gelir turlerine gore dagilim</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <IncomeTypeCard type="SALARY" amount={45000} />
-            <IncomeTypeCard type="RENTAL" amount={15000} />
-            <IncomeTypeCard type="DIVIDEND" amount={2500} />
-            <IncomeTypeCard type="FREELANCE" amount={8000} />
-          </div>
+          {Object.keys(byType).length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(byType).map(([type, amount]) => (
+                <IncomeTypeCard key={type} type={type} amount={amount} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">Henuz gelir verisi yok</p>
+          )}
         </CardContent>
       </Card>
 
@@ -100,44 +147,55 @@ export default function IncomesPage() {
           <CardDescription>Tum gelirleriniz</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tur</TableHead>
-                <TableHead>Aciklama</TableHead>
-                <TableHead className="text-right">Tutar</TableHead>
-                <TableHead>Tarih</TableHead>
-                <TableHead>Tekrar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockIncomes.map((income) => {
-                const typeInfo = incomeTypes[income.type] ?? incomeTypes.OTHER!;
-                return (
-                  <TableRow key={income.id}>
-                    <TableCell>
-                      <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
-                    </TableCell>
-                    <TableCell>{income.description}</TableCell>
-                    <TableCell className="text-right font-medium text-green-600">
-                      +₺{income.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell>{new Date(income.date).toLocaleDateString("tr-TR")}</TableCell>
-                    <TableCell>
-                      {income.isRecurring ? (
-                        <Badge variant="outline" className="gap-1">
-                          <Repeat className="h-3 w-3" />
-                          Aylik
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {incomes.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tur</TableHead>
+                  <TableHead>Aciklama</TableHead>
+                  <TableHead className="text-right">Tutar</TableHead>
+                  <TableHead>Tarih</TableHead>
+                  <TableHead>Tekrar</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {incomes.map((income) => {
+                  const typeInfo = incomeTypes[income.type] ?? incomeTypes.OTHER!;
+                  const amount = Number(income.amount);
+                  return (
+                    <TableRow key={income.id}>
+                      <TableCell>
+                        <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
+                      </TableCell>
+                      <TableCell>{income.description || "-"}</TableCell>
+                      <TableCell className="text-right font-medium text-green-600">
+                        +₺{amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>{new Date(income.date).toLocaleDateString("tr-TR")}</TableCell>
+                      <TableCell>
+                        {income.isRecurring && income.frequency ? (
+                          <Badge variant="outline" className="gap-1">
+                            <Repeat className="h-3 w-3" />
+                            {frequencyLabels[income.frequency] || income.frequency}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Henuz gelir eklenmedi</p>
+              <Button className="mt-4 gap-2">
+                <Plus className="h-4 w-4" />
+                Ilk Gelirinizi Ekleyin
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -149,7 +207,7 @@ function IncomeTypeCard({ type, amount }: { type: string; amount: number }) {
   return (
     <div className="p-4 bg-gray-50 rounded-lg text-center">
       <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
-      <p className="text-xl font-bold mt-2">₺{amount.toLocaleString()}</p>
+      <p className="text-xl font-bold mt-2">₺{Number(amount).toLocaleString()}</p>
     </div>
   );
 }

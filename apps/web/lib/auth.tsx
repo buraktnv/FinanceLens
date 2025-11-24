@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session, SupabaseClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 
@@ -15,22 +15,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Lazy getter for supabase client
+function getSupabaseClient(): SupabaseClient | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    // Dynamic require to avoid SSR issues
+    const { createClient } = require('./supabase/client');
+    return createClient();
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const supabaseRef = useRef<SupabaseClient | null>(null);
   const router = useRouter();
 
-  // Initialize Supabase client on client-side only
-  useEffect(() => {
-    import('./supabase/client').then(({ createClient }) => {
-      setSupabase(createClient());
-    });
-  }, []);
+  // Get or create supabase client
+  const getClient = (): SupabaseClient | null => {
+    if (!supabaseRef.current) {
+      supabaseRef.current = getSupabaseClient();
+    }
+    return supabaseRef.current;
+  };
 
   useEffect(() => {
-    if (!supabase) return;
+    const supabase = getClient();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -49,11 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
+    const supabase = getClient();
     if (!supabase) {
-      return { error: new Error('Not initialized') };
+      return { error: new Error('Supabase is not configured. Please check your environment variables.') };
     }
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -67,8 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name?: string) => {
+    const supabase = getClient();
     if (!supabase) {
-      return { error: new Error('Not initialized') };
+      return { error: new Error('Supabase is not configured. Please check your environment variables.') };
     }
     const { error } = await supabase.auth.signUp({
       email,
@@ -87,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    const supabase = getClient();
     if (!supabase) return;
     await supabase.auth.signOut();
     router.push('/login');

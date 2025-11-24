@@ -14,8 +14,9 @@ async function bootstrap() {
   // Set global prefix for API routes
   app.setGlobalPrefix('api');
 
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.PORT ?? 3002;
   await app.listen(port);
   console.log(`API running on http://localhost:${port}`);
 }
+
 bootstrap();

@@ -1,3 +1,6 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,41 +12,102 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Repeat } from "lucide-react";
+import { Plus, Repeat, Loader2 } from "lucide-react";
+import { expensesApi } from "@/lib/api";
 
 const expenseCategories: Record<string, { label: string; color: string }> = {
   RENT: { label: "Kira", color: "bg-red-100 text-red-800" },
+  MORTGAGE_PAYMENT: { label: "Mortgage", color: "bg-red-100 text-red-800" },
   UTILITIES: { label: "Faturalar", color: "bg-orange-100 text-orange-800" },
+  INTERNET: { label: "Internet", color: "bg-orange-100 text-orange-800" },
+  PHONE: { label: "Telefon", color: "bg-orange-100 text-orange-800" },
+  MAINTENANCE: { label: "Bakim", color: "bg-orange-100 text-orange-800" },
+  INSURANCE: { label: "Sigorta", color: "bg-orange-100 text-orange-800" },
+  HOA_FEE: { label: "Aidat", color: "bg-orange-100 text-orange-800" },
+  PROPERTY_TAX: { label: "Emlak Vergisi", color: "bg-orange-100 text-orange-800" },
   GROCERIES: { label: "Market", color: "bg-green-100 text-green-800" },
   TRANSPORTATION: { label: "Ulasim", color: "bg-blue-100 text-blue-800" },
+  FUEL: { label: "Yakit", color: "bg-blue-100 text-blue-800" },
+  CAR_PAYMENT: { label: "Arac Taksit", color: "bg-blue-100 text-blue-800" },
+  CAR_INSURANCE: { label: "Arac Sigorta", color: "bg-blue-100 text-blue-800" },
+  CAR_MAINTENANCE: { label: "Arac Bakim", color: "bg-blue-100 text-blue-800" },
+  PARKING: { label: "Otopark", color: "bg-blue-100 text-blue-800" },
   DINING: { label: "Yemek", color: "bg-yellow-100 text-yellow-800" },
+  COFFEE: { label: "Kahve", color: "bg-yellow-100 text-yellow-800" },
   ENTERTAINMENT: { label: "Eglence", color: "bg-purple-100 text-purple-800" },
   HEALTHCARE: { label: "Saglik", color: "bg-pink-100 text-pink-800" },
+  EDUCATION: { label: "Egitim", color: "bg-indigo-100 text-indigo-800" },
   SHOPPING: { label: "Alisveris", color: "bg-indigo-100 text-indigo-800" },
+  CLOTHING: { label: "Giyim", color: "bg-indigo-100 text-indigo-800" },
+  PERSONAL_CARE: { label: "Kisisel Bakim", color: "bg-pink-100 text-pink-800" },
+  GYM: { label: "Spor", color: "bg-lime-100 text-lime-800" },
   SUBSCRIPTIONS: { label: "Abonelik", color: "bg-cyan-100 text-cyan-800" },
+  TRAVEL: { label: "Seyahat", color: "bg-teal-100 text-teal-800" },
+  GIFTS: { label: "Hediye", color: "bg-rose-100 text-rose-800" },
+  DONATIONS: { label: "Bagis", color: "bg-rose-100 text-rose-800" },
+  TAXES: { label: "Vergi", color: "bg-slate-100 text-slate-800" },
+  FEES: { label: "Ucret", color: "bg-slate-100 text-slate-800" },
   OTHER: { label: "Diger", color: "bg-gray-100 text-gray-800" },
 };
 
-const mockExpenses = [
-  { id: 1, category: "RENT", description: "Ev Kirasi", amount: 12000, currency: "TRY", date: "2024-01-05", isRecurring: true, paymentMethod: "BANK_TRANSFER" },
-  { id: 2, category: "UTILITIES", description: "Elektrik Faturasi", amount: 850, currency: "TRY", date: "2024-01-10", isRecurring: true, paymentMethod: "CREDIT_CARD" },
-  { id: 3, category: "UTILITIES", description: "Dogalgaz Faturasi", amount: 1200, currency: "TRY", date: "2024-01-12", isRecurring: true, paymentMethod: "CREDIT_CARD" },
-  { id: 4, category: "GROCERIES", description: "Haftalik Market", amount: 2500, currency: "TRY", date: "2024-01-20", isRecurring: false, paymentMethod: "CREDIT_CARD" },
-  { id: 5, category: "TRANSPORTATION", description: "Akbil Yukleme", amount: 500, currency: "TRY", date: "2024-01-15", isRecurring: false, paymentMethod: "CASH" },
-  { id: 6, category: "DINING", description: "Restoran", amount: 750, currency: "TRY", date: "2024-01-18", isRecurring: false, paymentMethod: "CREDIT_CARD" },
-  { id: 7, category: "SUBSCRIPTIONS", description: "Netflix + Spotify", amount: 250, currency: "TRY", date: "2024-01-01", isRecurring: true, paymentMethod: "CREDIT_CARD" },
-  { id: 8, category: "HEALTHCARE", description: "Eczane", amount: 320, currency: "TRY", date: "2024-01-22", isRecurring: false, paymentMethod: "CASH" },
-];
+const paymentMethodLabels: Record<string, string> = {
+  CASH: "Nakit",
+  CREDIT_CARD: "Kredi Karti",
+  DEBIT_CARD: "Banka Karti",
+  BANK_TRANSFER: "Havale",
+  MOBILE_PAYMENT: "Mobil Odeme",
+  CRYPTO: "Kripto",
+  OTHER: "Diger",
+};
+
+const frequencyLabels: Record<string, string> = {
+  DAILY: "Gunluk",
+  WEEKLY: "Haftalik",
+  BIWEEKLY: "2 Haftalik",
+  MONTHLY: "Aylik",
+  QUARTERLY: "3 Aylik",
+  SEMIANNUAL: "6 Aylik",
+  ANNUAL: "Yillik",
+};
 
 export default function ExpensesPage() {
-  const totalThisMonth = mockExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalRecurring = mockExpenses.filter(e => e.isRecurring).reduce((sum, e) => sum + e.amount, 0);
+  const { data: expenses = [], isLoading: expensesLoading, error: expensesError } = useQuery({
+    queryKey: ["expenses"],
+    queryFn: () => expensesApi.getAll(),
+  });
 
-  // Calculate by category
-  const byCategory = mockExpenses.reduce((acc, e) => {
-    acc[e.category] = (acc[e.category] || 0) + e.amount;
-    return acc;
-  }, {} as Record<string, number>);
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["expenses", "summary"],
+    queryFn: () => expensesApi.getSummary(),
+  });
+
+  const isLoading = expensesLoading || summaryLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (expensesError) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-500">
+          {expensesError instanceof Error ? expensesError.message : "Veri yuklenirken hata olustu"}
+        </p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Tekrar Dene
+        </Button>
+      </div>
+    );
+  }
+
+  const totalThisMonth = summary?.total ?? 0;
+  const totalRecurring = summary?.recurring ?? 0;
+  const expenseCount = summary?.count ?? expenses.length;
+  const byCategory = summary?.byCategory ?? {};
 
   return (
     <div className="space-y-6">
@@ -83,7 +147,7 @@ export default function ExpensesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Islem Sayisi</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockExpenses.length}</div>
+            <div className="text-2xl font-bold">{expenseCount}</div>
             <p className="text-xs text-muted-foreground">Bu ay</p>
           </CardContent>
         </Card>
@@ -96,31 +160,35 @@ export default function ExpensesPage() {
           <CardDescription>Paraniz nereye gidiyor?</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {Object.entries(byCategory)
-              .sort(([, a], [, b]) => b - a)
-              .map(([category, amount]) => {
-                const categoryInfo = expenseCategories[category] ?? expenseCategories.OTHER!;
-                const percentage = ((amount / totalThisMonth) * 100).toFixed(1);
-                return (
-                  <div key={category} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
-                        <span className="text-sm text-muted-foreground">{percentage}%</span>
+          {Object.keys(byCategory).length > 0 ? (
+            <div className="space-y-4">
+              {Object.entries(byCategory)
+                .sort(([, a], [, b]) => b - a)
+                .map(([category, amount]) => {
+                  const categoryInfo = expenseCategories[category] ?? expenseCategories.OTHER!;
+                  const percentage = totalThisMonth > 0 ? ((amount / totalThisMonth) * 100).toFixed(1) : "0";
+                  return (
+                    <div key={category} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
+                          <span className="text-sm text-muted-foreground">{percentage}%</span>
+                        </div>
+                        <span className="font-medium">₺{Number(amount).toLocaleString()}</span>
                       </div>
-                      <span className="font-medium">₺{amount.toLocaleString()}</span>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">Henuz harcama verisi yok</p>
+          )}
         </CardContent>
       </Card>
 
@@ -131,51 +199,65 @@ export default function ExpensesPage() {
           <CardDescription>Tum harcamalariniz</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Aciklama</TableHead>
-                <TableHead className="text-right">Tutar</TableHead>
-                <TableHead>Tarih</TableHead>
-                <TableHead>Odeme</TableHead>
-                <TableHead>Tekrar</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockExpenses.map((expense) => {
-                const categoryInfo = expenseCategories[expense.category] ?? expenseCategories.OTHER!;
-                return (
-                  <TableRow key={expense.id}>
-                    <TableCell>
-                      <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
-                    </TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell className="text-right font-medium text-red-600">
-                      -₺{expense.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell>{new Date(expense.date).toLocaleDateString("tr-TR")}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {expense.paymentMethod === "CREDIT_CARD" ? "Kredi Karti" :
-                          expense.paymentMethod === "CASH" ? "Nakit" : "Havale"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {expense.isRecurring ? (
-                        <Badge variant="outline" className="gap-1">
-                          <Repeat className="h-3 w-3" />
-                          Aylik
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {expenses.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Aciklama</TableHead>
+                  <TableHead className="text-right">Tutar</TableHead>
+                  <TableHead>Tarih</TableHead>
+                  <TableHead>Odeme</TableHead>
+                  <TableHead>Tekrar</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {expenses.map((expense) => {
+                  const categoryInfo = expenseCategories[expense.category] ?? expenseCategories.OTHER!;
+                  const amount = Number(expense.amount);
+                  return (
+                    <TableRow key={expense.id}>
+                      <TableCell>
+                        <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
+                      </TableCell>
+                      <TableCell>{expense.description || "-"}</TableCell>
+                      <TableCell className="text-right font-medium text-red-600">
+                        -₺{amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>{new Date(expense.date).toLocaleDateString("tr-TR")}</TableCell>
+                      <TableCell>
+                        {expense.paymentMethod ? (
+                          <Badge variant="outline">
+                            {paymentMethodLabels[expense.paymentMethod] || expense.paymentMethod}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {expense.isRecurring && expense.frequency ? (
+                          <Badge variant="outline" className="gap-1">
+                            <Repeat className="h-3 w-3" />
+                            {frequencyLabels[expense.frequency] || expense.frequency}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Henuz gider eklenmedi</p>
+              <Button className="mt-4 gap-2">
+                <Plus className="h-4 w-4" />
+                Ilk Giderinizi Ekleyin
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
