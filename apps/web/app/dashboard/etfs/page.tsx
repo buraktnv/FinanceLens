@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,11 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2 } from "lucide-react";
 import { etfsApi } from "@/lib/api";
+import { AddETFForm } from "@/components/forms/add-etf-form";
 
 export default function ETFsPage() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { data: etfs = [], isLoading: etfsLoading, error: etfsError } = useQuery({
     queryKey: ["etfs"],
     queryFn: () => etfsApi.getAll(),
@@ -60,7 +70,7 @@ export default function ETFsPage() {
           <h1 className="text-3xl font-bold">ETF'ler</h1>
           <p className="text-muted-foreground">ETF portfoyunuzu yonetin</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
           Yeni ETF Ekle
         </Button>
@@ -144,7 +154,7 @@ export default function ETFsPage() {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Henuz ETF eklenmedi</p>
-              <Button className="mt-4 gap-2">
+              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
                 Ilk ETF'inizi Ekleyin
               </Button>
@@ -152,6 +162,22 @@ export default function ETFsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add ETF Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Yeni ETF Ekle</DialogTitle>
+            <DialogDescription>
+              Yahoo Finance'dan sembol arayarak ETF'lerinizi ekleyin
+            </DialogDescription>
+          </DialogHeader>
+          <AddETFForm
+            onSuccess={() => setShowAddDialog(false)}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Distributions */}
       <Card>

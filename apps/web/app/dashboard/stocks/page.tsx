@@ -13,11 +13,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, Search, Loader2 } from "lucide-react";
 import { stocksApi } from "@/lib/api";
+import { AddStockForm } from "@/components/forms/add-stock-form";
 
 export default function StocksPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const { data: stocks = [], isLoading: stocksLoading, error: stocksError } = useQuery({
     queryKey: ["stocks"],
@@ -74,7 +83,7 @@ export default function StocksPage() {
           <h1 className="text-3xl font-bold">Hisse Senetleri</h1>
           <p className="text-muted-foreground">Hisse senedi portfoyunuzu yonetin</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
           Yeni Hisse Ekle
         </Button>
@@ -167,7 +176,7 @@ export default function StocksPage() {
                 {searchTerm ? "Aramanizla eslesen hisse bulunamadi" : "Henuz hisse eklenmedi"}
               </p>
               {!searchTerm && (
-                <Button className="mt-4 gap-2">
+                <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4" />
                   Ilk Hissenizi Ekleyin
                 </Button>
@@ -176,6 +185,22 @@ export default function StocksPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Stock Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Yeni Hisse Ekle</DialogTitle>
+            <DialogDescription>
+              Yahoo Finance'dan sembol arayarak hisse senetlerinizi ekleyin
+            </DialogDescription>
+          </DialogHeader>
+          <AddStockForm
+            onSuccess={() => setShowAddDialog(false)}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

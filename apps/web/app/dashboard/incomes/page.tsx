@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Repeat, Loader2 } from "lucide-react";
 import { incomesApi } from "@/lib/api";
+import { AddIncomeForm } from "@/components/forms/add-income-form";
 
 const incomeTypes: Record<string, { label: string; color: string }> = {
   SALARY: { label: "Maas", color: "bg-blue-100 text-blue-800" },
@@ -39,6 +48,7 @@ const frequencyLabels: Record<string, string> = {
 };
 
 export default function IncomesPage() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { data: incomes = [], isLoading: incomesLoading, error: incomesError } = useQuery({
     queryKey: ["incomes"],
     queryFn: () => incomesApi.getAll(),
@@ -85,7 +95,7 @@ export default function IncomesPage() {
           <h1 className="text-3xl font-bold">Gelirler</h1>
           <p className="text-muted-foreground">Gelirlerinizi takip edin</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
           Yeni Gelir Ekle
         </Button>
@@ -190,7 +200,7 @@ export default function IncomesPage() {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Henuz gelir eklenmedi</p>
-              <Button className="mt-4 gap-2">
+              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
                 Ilk Gelirinizi Ekleyin
               </Button>
@@ -198,6 +208,22 @@ export default function IncomesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Income Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Yeni Gelir Ekle</DialogTitle>
+            <DialogDescription>
+              Gelir bilgilerinizi girin
+            </DialogDescription>
+          </DialogHeader>
+          <AddIncomeForm
+            onSuccess={() => setShowAddDialog(false)}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

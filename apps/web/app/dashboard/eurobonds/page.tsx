@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,11 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, Loader2 } from "lucide-react";
 import { eurobondsApi } from "@/lib/api";
+import { AddEurobondForm } from "@/components/forms/add-eurobond-form";
 
 export default function EurobondsPage() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { data: eurobonds = [], isLoading: bondsLoading, error: bondsError } = useQuery({
     queryKey: ["eurobonds"],
     queryFn: () => eurobondsApi.getAll(),
@@ -62,7 +72,7 @@ export default function EurobondsPage() {
           <h1 className="text-3xl font-bold">Eurobond</h1>
           <p className="text-muted-foreground">Eurobond portfoyunuzu yonetin</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
           Yeni Eurobond Ekle
         </Button>
@@ -158,7 +168,7 @@ export default function EurobondsPage() {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Henuz eurobond eklenmedi</p>
-              <Button className="mt-4 gap-2">
+              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
                 Ilk Eurobondunuzu Ekleyin
               </Button>
@@ -166,6 +176,22 @@ export default function EurobondsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Eurobond Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Yeni Eurobond Ekle</DialogTitle>
+            <DialogDescription>
+              Eurobond bilgilerini manuel olarak girin
+            </DialogDescription>
+          </DialogHeader>
+          <AddEurobondForm
+            onSuccess={() => setShowAddDialog(false)}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Upcoming Coupons */}
       <Card>

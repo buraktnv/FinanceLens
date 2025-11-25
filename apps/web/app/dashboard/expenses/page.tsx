@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Repeat, Loader2 } from "lucide-react";
 import { expensesApi } from "@/lib/api";
+import { AddExpenseForm } from "@/components/forms/add-expense-form";
 
 const expenseCategories: Record<string, { label: string; color: string }> = {
   RENT: { label: "Kira", color: "bg-red-100 text-red-800" },
@@ -71,6 +80,7 @@ const frequencyLabels: Record<string, string> = {
 };
 
 export default function ExpensesPage() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { data: expenses = [], isLoading: expensesLoading, error: expensesError } = useQuery({
     queryKey: ["expenses"],
     queryFn: () => expensesApi.getAll(),
@@ -117,7 +127,7 @@ export default function ExpensesPage() {
           <h1 className="text-3xl font-bold">Giderler</h1>
           <p className="text-muted-foreground">Harcamalarinizi takip edin</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
           Yeni Gider Ekle
         </Button>
@@ -252,7 +262,7 @@ export default function ExpensesPage() {
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Henuz gider eklenmedi</p>
-              <Button className="mt-4 gap-2">
+              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
                 Ilk Giderinizi Ekleyin
               </Button>
@@ -260,6 +270,22 @@ export default function ExpensesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Expense Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Yeni Gider Ekle</DialogTitle>
+            <DialogDescription>
+              Gider bilgilerinizi girin
+            </DialogDescription>
+          </DialogHeader>
+          <AddExpenseForm
+            onSuccess={() => setShowAddDialog(false)}
+            onCancel={() => setShowAddDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
