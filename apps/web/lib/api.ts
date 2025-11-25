@@ -410,3 +410,36 @@ export interface CreateExpenseInput {
   propertyId?: string;
   notes?: string;
 }
+
+// Yahoo Finance API
+export const yahooFinanceApi = {
+  search: (query: string) =>
+    request<YahooSearchResult[]>('/yahoo-finance/search', { params: { q: query } }),
+  getQuote: (symbol: string) =>
+    request<YahooQuote>(`/yahoo-finance/quote/${symbol}`),
+  getHistorical: (symbol: string, period1: number, period2: number, interval = '1d') =>
+    request<any>(`/yahoo-finance/historical/${symbol}`, {
+      params: {
+        period1: String(period1),
+        period2: String(period2),
+        interval,
+      },
+    }),
+};
+
+export interface YahooQuote {
+  symbol: string;
+  name: string;
+  regularMarketPrice: number;
+  regularMarketChange: number;
+  regularMarketChangePercent: number;
+  currency: string;
+  marketState: string;
+}
+
+export interface YahooSearchResult {
+  symbol: string;
+  name: string;
+  type: string;
+  exchange: string;
+}

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Wallet,
   LayoutDashboard,
@@ -13,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/lib/auth";
 
 const sidebarLinks = [
   {
@@ -52,6 +56,18 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
+
+  // Get user display name and email
+  const userEmail = user?.email || "user@example.com";
+  const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "Kullanici";
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -93,16 +109,18 @@ export default function DashboardLayout({
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
                 <User className="h-4 w-4" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Kullanici</p>
-                <p className="text-xs text-muted-foreground">ornek@email.com</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{userName}</p>
+                <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
               </div>
             </div>
-            <Button variant="ghost" className="w-full justify-start gap-3 mt-2" asChild>
-              <Link href="/">
-                <LogOut className="h-4 w-4" />
-                Cikis Yap
-              </Link>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 mt-2"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              Cikis Yap
             </Button>
           </div>
         </div>

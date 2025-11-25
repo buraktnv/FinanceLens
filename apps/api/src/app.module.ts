@@ -10,6 +10,7 @@ import { EtfsModule } from './etfs/etfs.module';
 import { IncomesModule } from './incomes/incomes.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { YahooFinanceModule } from './yahoo-finance/yahoo-finance.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     IncomesModule,
     ExpensesModule,
     DashboardModule,
+    YahooFinanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
