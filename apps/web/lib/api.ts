@@ -150,6 +150,9 @@ export interface DashboardOverview {
     stocks: { count: number; value: number };
     etfs: { count: number; value: number };
     eurobonds: { count: number; value: number };
+    cash: { count: number; value: number };
+    gold: { count: number; value: number };
+    silver: { count: number; value: number };
     loans: { count: number; balance: number };
   };
   monthly: {
@@ -410,6 +413,171 @@ export interface CreateExpenseInput {
   propertyId?: string;
   notes?: string;
 }
+
+export interface Cash {
+  id: string;
+  accountName: string;
+  balance: number;
+  currency: string;
+  accountType?: string;
+  bankName?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CashSummary {
+  totalAccounts: number;
+  totalBalance: number;
+  byCurrency: Record<string, number>;
+  accounts: Array<{
+    id: string;
+    accountName: string;
+    balance: number;
+    currency: string;
+    accountType?: string;
+    bankName?: string;
+  }>;
+}
+
+export interface CreateCashInput {
+  accountName: string;
+  balance: number;
+  currency?: string;
+  accountType?: string;
+  bankName?: string;
+  notes?: string;
+}
+
+export interface Gold {
+  id: string;
+  name: string;
+  quantity: number;
+  purchasePrice: number;
+  purchaseDate: string;
+  purity?: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoldSummary {
+  totalHoldings: number;
+  totalQuantity: number;
+  totalCost: number;
+  holdings: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    purchasePrice: number;
+    purchaseDate: string;
+    purity?: string;
+    totalCost: number;
+  }>;
+}
+
+export interface CreateGoldInput {
+  name: string;
+  quantity: number;
+  purchasePrice: number;
+  purchaseDate: string;
+  purity?: string;
+  location?: string;
+  notes?: string;
+}
+
+export interface Silver {
+  id: string;
+  name: string;
+  quantity: number;
+  purchasePrice: number;
+  purchaseDate: string;
+  purity?: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SilverSummary {
+  totalHoldings: number;
+  totalQuantity: number;
+  totalCost: number;
+  holdings: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    purchasePrice: number;
+    purchaseDate: string;
+    purity?: string;
+    totalCost: number;
+  }>;
+}
+
+export interface CreateSilverInput {
+  name: string;
+  quantity: number;
+  purchasePrice: number;
+  purchaseDate: string;
+  purity?: string;
+  location?: string;
+  notes?: string;
+}
+
+export interface PreciousMetalPrice {
+  metal: 'GOLD' | 'SILVER';
+  pricePerGram: number;
+  pricePerOunce: number;
+  currency: 'TRY';
+  lastUpdated: string;
+  usdToTry: number;
+}
+
+// Cash API
+export const cashApi = {
+  getAll: () => request<Cash[]>('/cash'),
+  getOne: (id: string) => request<Cash>(`/cash/${id}`),
+  getSummary: () => request<CashSummary>('/cash/summary'),
+  create: (data: CreateCashInput) =>
+    request<Cash>('/cash', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateCashInput>) =>
+    request<Cash>(`/cash/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request<void>(`/cash/${id}`, { method: 'DELETE' }),
+};
+
+// Gold API
+export const goldApi = {
+  getAll: () => request<Gold[]>('/gold'),
+  getOne: (id: string) => request<Gold>(`/gold/${id}`),
+  getSummary: () => request<GoldSummary>('/gold/summary'),
+  create: (data: CreateGoldInput) =>
+    request<Gold>('/gold', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateGoldInput>) =>
+    request<Gold>(`/gold/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request<void>(`/gold/${id}`, { method: 'DELETE' }),
+};
+
+// Silver API
+export const silverApi = {
+  getAll: () => request<Silver[]>('/silver'),
+  getOne: (id: string) => request<Silver>(`/silver/${id}`),
+  getSummary: () => request<SilverSummary>('/silver/summary'),
+  create: (data: CreateSilverInput) =>
+    request<Silver>('/silver', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Partial<CreateSilverInput>) =>
+    request<Silver>(`/silver/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id: string) =>
+    request<void>(`/silver/${id}`, { method: 'DELETE' }),
+};
+
+// Precious Metals Price API
+export const preciousMetalsApi = {
+  getGoldPrice: () => request<PreciousMetalPrice>('/precious-metals/gold/price'),
+  getSilverPrice: () => request<PreciousMetalPrice>('/precious-metals/silver/price'),
+};
 
 // Yahoo Finance API
 export const yahooFinanceApi = {

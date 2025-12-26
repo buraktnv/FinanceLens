@@ -111,24 +111,24 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <QuickActionCard
+          title="Nakit Ekle"
+          description="Yeni nakit hesabi ekleyin"
+          href="/dashboard/cash"
+        />
+        <QuickActionCard
+          title="Altin Ekle"
+          description="Yeni altin ekleyin"
+          href="/dashboard/gold"
+        />
+        <QuickActionCard
+          title="Gumus Ekle"
+          description="Yeni gumus ekleyin"
+          href="/dashboard/silver"
+        />
+        <QuickActionCard
           title="Hisse Ekle"
           description="Yeni hisse senedi ekleyin"
           href="/dashboard/stocks"
-        />
-        <QuickActionCard
-          title="ETF Ekle"
-          description="Yeni ETF ekleyin"
-          href="/dashboard/etfs"
-        />
-        <QuickActionCard
-          title="Gelir Ekle"
-          description="Yeni gelir kaydedin"
-          href="/dashboard/incomes"
-        />
-        <QuickActionCard
-          title="Gider Ekle"
-          description="Yeni gider kaydedin"
-          href="/dashboard/expenses"
         />
       </div>
 
@@ -143,6 +143,24 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {overview?.breakdown && (
                 <>
+                  <PortfolioItem
+                    label="Nakit"
+                    value={formatCurrency(overview.breakdown.cash?.value ?? 0)}
+                    percentage={totalAssets > 0 ? ((overview.breakdown.cash?.value ?? 0) / totalAssets) * 100 : 0}
+                    color="bg-emerald-500"
+                  />
+                  <PortfolioItem
+                    label="Altin"
+                    value={formatCurrency(overview.breakdown.gold?.value ?? 0)}
+                    percentage={totalAssets > 0 ? ((overview.breakdown.gold?.value ?? 0) / totalAssets) * 100 : 0}
+                    color="bg-amber-500"
+                  />
+                  <PortfolioItem
+                    label="Gumus"
+                    value={formatCurrency(overview.breakdown.silver?.value ?? 0)}
+                    percentage={totalAssets > 0 ? ((overview.breakdown.silver?.value ?? 0) / totalAssets) * 100 : 0}
+                    color="bg-slate-400"
+                  />
                   <PortfolioItem
                     label="Hisse Senetleri"
                     value={formatCurrency(overview.breakdown.stocks?.value ?? 0)}
@@ -164,6 +182,9 @@ export default function DashboardPage() {
                 </>
               )}
               {(!overview?.breakdown || (
+                (overview.breakdown.cash?.value ?? 0) === 0 &&
+                (overview.breakdown.gold?.value ?? 0) === 0 &&
+                (overview.breakdown.silver?.value ?? 0) === 0 &&
                 (overview.breakdown.stocks?.value ?? 0) === 0 &&
                 (overview.breakdown.etfs?.value ?? 0) === 0 &&
                 (overview.breakdown.eurobonds?.value ?? 0) === 0

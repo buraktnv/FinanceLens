@@ -6,10 +6,13 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getOverview(userId: string) {
-    const [stocks, etfs, eurobonds, incomes, expenses, loans] = await Promise.all([
+    const [stocks, etfs, eurobonds, cash, gold, silver, incomes, expenses, loans] = await Promise.all([
       this.prisma.stock.findMany({ where: { userId } }),
       this.prisma.eTF.findMany({ where: { userId } }),
       this.prisma.eurobond.findMany({ where: { userId } }),
+      this.prisma.cash.findMany({ where: { userId } }),
+      this.prisma.gold.findMany({ where: { userId } }),
+      this.prisma.silver.findMany({ where: { userId } }),
       this.getMonthlyIncomes(userId),
       this.getMonthlyExpenses(userId),
       this.prisma.loan.findMany({ where: { userId, status: 'ACTIVE' } }),
@@ -24,11 +27,20 @@ export class DashboardService {
     // Calculate Eurobond values (face value * quantity)
     const eurobondsValue = eurobonds.reduce((sum, e) => sum + Number(e.faceValue) * Number(e.quantity), 0);
 
+    // Calculate cash total (sum all balances for now - no currency conversion yet)
+    const cashValue = cash.reduce((sum, c) => sum + Number(c.balance), 0);
+
+    // Calculate gold value (just purchase cost for now - current market price will be fetched on frontend)
+    const goldValue = gold.reduce((sum, g) => sum + Number(g.quantity) * Number(g.purchasePrice), 0);
+
+    // Calculate silver value (just purchase cost for now - current market price will be fetched on frontend)
+    const silverValue = silver.reduce((sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice), 0);
+
     // Calculate loan balances
     const totalDebt = loans.reduce((sum, l) => sum + Number(l.remainingBalance || l.principalAmount), 0);
 
     // Net worth
-    const totalAssets = stocksValue + etfsValue + eurobondsValue;
+    const totalAssets = stocksValue + etfsValue + eurobondsValue + cashValue + goldValue + silverValue;
     const netWorth = totalAssets - totalDebt;
 
     return {
@@ -39,6 +51,9 @@ export class DashboardService {
         stocks: { count: stocks.length, value: stocksValue },
         etfs: { count: etfs.length, value: etfsValue },
         eurobonds: { count: eurobonds.length, value: eurobondsValue },
+        cash: { count: cash.length, value: cashValue },
+        gold: { count: gold.length, value: goldValue },
+        silver: { count: silver.length, value: silverValue },
         loans: { count: loans.length, balance: totalDebt },
       },
       monthly: {

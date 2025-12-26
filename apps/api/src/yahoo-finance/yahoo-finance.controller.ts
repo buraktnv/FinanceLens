@@ -1,9 +1,9 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { YahooFinanceService } from './yahoo-finance.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Controller('yahoo-finance')
-@UseGuards(JwtAuthGuard)
+@UseGuards(AuthGuard)
 export class YahooFinanceController {
   constructor(private readonly yahooFinanceService: YahooFinanceService) {}
 

@@ -7,12 +7,14 @@ import {
 import { Reflector } from '@nestjs/core';
 import { SupabaseService } from './supabase.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import { PrismaService } from '../prisma';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private supabaseService: SupabaseService,
     private reflector: Reflector,
+    private prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,6 +40,20 @@ export class AuthGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('Invalid token');
     }
+
+    // Ensure user exists in database (create if doesn't exist)
+    await this.prisma.user.upsert({
+      where: { id: user.id },
+      update: {
+        email: user.email!,
+        name: user.user_metadata?.name,
+      },
+      create: {
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.name,
+      },
+    });
 
     // Attach user to request for use in controllers
     request.user = user;

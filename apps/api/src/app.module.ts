@@ -11,6 +11,10 @@ import { IncomesModule } from './incomes/incomes.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { YahooFinanceModule } from './yahoo-finance/yahoo-finance.module';
+import { CashModule } from './cash/cash.module';
+import { GoldModule } from './gold/gold.module';
+import { SilverModule } from './silver/silver.module';
+import { PreciousMetalsModule } from './precious-metals/precious-metals.module';
 
 @Module({
   imports: [
@@ -24,6 +28,10 @@ import { YahooFinanceModule } from './yahoo-finance/yahoo-finance.module';
     EtfsModule,
     IncomesModule,
     ExpensesModule,
+    CashModule,
+    GoldModule,
+    SilverModule,
+    PreciousMetalsModule,
     DashboardModule,
     YahooFinanceModule,
   ],

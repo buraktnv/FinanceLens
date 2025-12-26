@@ -12,7 +12,9 @@ import {
   ArrowUpCircle,
   LogOut,
   User,
-  FileText
+  FileText,
+  Coins,
+  Gem
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +25,21 @@ const sidebarLinks = [
     title: "Genel Bakis",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Nakit",
+    href: "/dashboard/cash",
+    icon: Wallet,
+  },
+  {
+    title: "Altin",
+    href: "/dashboard/gold",
+    icon: Coins,
+  },
+  {
+    title: "Gumus",
+    href: "/dashboard/silver",
+    icon: Gem,
   },
   {
     title: "Hisse Senetleri",
