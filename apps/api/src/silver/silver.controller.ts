@@ -8,16 +8,22 @@ import {
   Delete,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SilverService } from './silver.service';
 import { CreateSilverDto, UpdateSilverDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Silver')
+@ApiBearerAuth()
 @Controller('silver')
 export class SilverController {
   constructor(private readonly silverService: SilverService) {}
 
   @Post()
-  create(@CurrentUser('id') userId: string, @Body() createSilverDto: CreateSilverDto) {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() createSilverDto: CreateSilverDto,
+  ) {
     return this.silverService.create(userId, createSilverDto);
   }
 

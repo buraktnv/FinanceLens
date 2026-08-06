@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { silverApi, Silver } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface EditSilverFormProps {
   silver: Silver;
@@ -22,7 +23,7 @@ export function EditSilverForm({ silver, onSuccess, onCancel }: EditSilverFormPr
     name: silver.name,
     quantity: silver.quantity,
     purchasePrice: silver.purchasePrice,
-    purchaseDate: silver.purchaseDate.split("T")[0],
+    purchaseDate: silver.purchaseDate.slice(0, 10),
     purity: silver.purity || "",
     location: silver.location || "",
     notes: silver.notes || "",
@@ -34,7 +35,11 @@ export function EditSilverForm({ silver, onSuccess, onCancel }: EditSilverFormPr
       queryClient.invalidateQueries({ queryKey: ["silver"] });
       queryClient.invalidateQueries({ queryKey: ["silver", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Silver holding updated successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

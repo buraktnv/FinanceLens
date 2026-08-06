@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,13 +20,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2 } from "lucide-react";
-import { etfsApi } from "@/lib/api";
+import { Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { etfsApi, ETF } from "@/lib/api";
 import { AddETFForm } from "@/components/forms/add-etf-form";
+import { EditETFForm } from "@/components/forms/edit-etf-form";
 
 export default function ETFsPage() {
+  const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingEtf, setEditingEtf] = useState<ETF | null>(null);
+  const [deletingEtf, setDeletingEtf] = useState<ETF | null>(null);
   const { data: etfs = [], isLoading: etfsLoading, error: etfsError } = useQuery({
     queryKey: ["etfs"],
     queryFn: () => etfsApi.getAll(),
@@ -37,6 +52,23 @@ export default function ETFsPage() {
   });
 
   const isLoading = etfsLoading || summaryLoading;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => etfsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["etfs"] });
+      queryClient.invalidateQueries({ queryKey: ["etfs", "summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("ETF deleted successfully");
+      setDeletingEtf(null);
+    },
+  });
+
+  const handleDelete = () => {
+    if (deletingEtf) {
+      deleteMutation.mutate(deletingEtf.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -50,10 +82,10 @@ export default function ETFsPage() {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">
-          {etfsError instanceof Error ? etfsError.message : "Veri yuklenirken hata olustu"}
+          {etfsError instanceof Error ? etfsError.message : "Error loading data"}
         </p>
         <Button onClick={() => window.location.reload()} className="mt-4">
-          Tekrar Dene
+          Try Again
         </Button>
       </div>
     );
@@ -65,41 +97,41 @@ export default function ETFsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">ETF'ler</h1>
-          <p className="text-muted-foreground">ETF portfoyunuzu yonetin</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">ETFs</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your ETF portfolio</p>
         </div>
-        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
-          Yeni ETF Ekle
+          Add New ETF
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Deger</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalValue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">${totalValue.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Dagitim</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Distributions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${totalDistributions.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalDistributions.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">ETF Sayisi</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">ETF Count</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.totalEtfs ?? 0}</div>
+            <div className="text-xl sm:text-2xl font-bold">{summary?.totalEtfs ?? 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -107,21 +139,22 @@ export default function ETFsPage() {
       {/* ETFs Table */}
       <Card>
         <CardHeader>
-          <CardTitle>ETF Portfoyu</CardTitle>
-          <CardDescription>Tum ETF'leriniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">ETF Portfolio</CardTitle>
+          <CardDescription className="text-sm">All your ETFs</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {etfs.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sembol</TableHead>
-                  <TableHead>ETF Adi</TableHead>
-                  <TableHead className="text-right">Adet</TableHead>
-                  <TableHead className="text-right">Alis Fiyati</TableHead>
-                  <TableHead className="text-right">Gider Orani</TableHead>
-                  <TableHead className="text-right">Toplam Maliyet</TableHead>
-                  <TableHead className="text-right">Alis Tarihi</TableHead>
+                  <TableHead className="text-sm">Symbol</TableHead>
+                  <TableHead className="text-sm">ETF Name</TableHead>
+                  <TableHead className="text-right text-sm">Quantity</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Price</TableHead>
+                  <TableHead className="text-right text-sm">Expense Ratio</TableHead>
+                  <TableHead className="text-right text-sm">Total Cost</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Date</TableHead>
+                  <TableHead className="text-right text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,9 +175,31 @@ export default function ETFsPage() {
                           <Badge variant="outline">%{expenseRatio.toFixed(2)}</Badge>
                         ) : "-"}
                       </TableCell>
-                      <TableCell className="text-right">${totalCost.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm">${totalCost.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm">
+                        {new Date(etf.purchaseDate).toLocaleDateString("en-US")}
+                      </TableCell>
                       <TableCell className="text-right">
-                        {new Date(etf.purchaseDate).toLocaleDateString("tr-TR")}
+                        <div className="flex justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingEtf(etf)}
+                            title="Edit"
+                            className="h-8 w-8"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeletingEtf(etf)}
+                            title="Delete"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -153,10 +208,10 @@ export default function ETFsPage() {
             </Table>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Henuz ETF eklenmedi</p>
+              <p className="text-sm sm:text-base text-muted-foreground">No ETFs added yet</p>
               <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
-                Ilk ETF'inizi Ekleyin
+                Add Your First ETF
               </Button>
             </div>
           )}
@@ -167,9 +222,9 @@ export default function ETFsPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni ETF Ekle</DialogTitle>
+            <DialogTitle>Add New ETF</DialogTitle>
             <DialogDescription>
-              Yahoo Finance'dan sembol arayarak ETF'lerinizi ekleyin
+              Search for ETF symbols from Yahoo Finance to add to your portfolio
             </DialogDescription>
           </DialogHeader>
           <AddETFForm
@@ -179,11 +234,58 @@ export default function ETFsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit ETF Dialog */}
+      <Dialog open={!!editingEtf} onOpenChange={(open) => !open && setEditingEtf(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit ETF</DialogTitle>
+            <DialogDescription>
+              Update your ETF information
+            </DialogDescription>
+          </DialogHeader>
+          {editingEtf && (
+            <EditETFForm
+              etf={editingEtf}
+              onSuccess={() => setEditingEtf(null)}
+              onCancel={() => setEditingEtf(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingEtf} onOpenChange={(open) => !open && setDeletingEtf(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete ETF</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingEtf && (
+                <>
+                  Are you sure you want to delete <strong>{deletingEtf.symbol} - {deletingEtf.name}</strong>?
+                  This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Distributions */}
       <Card>
         <CardHeader>
-          <CardTitle>Son Dagitimlar</CardTitle>
-          <CardDescription>ETF temettu ve dagitimlariniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Recent Distributions</CardTitle>
+          <CardDescription className="text-sm">Your ETF dividends and distributions</CardDescription>
         </CardHeader>
         <CardContent>
           {etfs.some(e => e.distributions && e.distributions.length > 0) ? (
@@ -194,14 +296,14 @@ export default function ETFsPage() {
                     key={dist.id}
                     etf={etf.symbol}
                     type={dist.type}
-                    date={new Date(dist.paymentDate).toLocaleDateString("tr-TR")}
+                    date={new Date(dist.paymentDate).toLocaleDateString("en-US")}
                     amount={`$${Number(dist.amount).toFixed(2)}`}
                   />
                 ))
               ).slice(0, 5)}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-4">Henuz dagitim yok</p>
+            <p className="text-sm sm:text-base text-muted-foreground text-center py-4">No distributions yet</p>
           )}
         </CardContent>
       </Card>

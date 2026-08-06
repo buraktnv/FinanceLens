@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { stocksApi, Stock } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface EditStockFormProps {
   stock: Stock;
@@ -24,7 +25,7 @@ export function EditStockForm({ stock, onSuccess, onCancel }: EditStockFormProps
     quantity: Number(stock.quantity),
     purchasePrice: Number(stock.purchasePrice),
     currency: stock.currency,
-    purchaseDate: stock.purchaseDate.split("T")[0],
+    purchaseDate: stock.purchaseDate.slice(0, 10),
     broker: stock.broker || "",
     notes: stock.notes || "",
   });
@@ -35,7 +36,11 @@ export function EditStockForm({ stock, onSuccess, onCancel }: EditStockFormProps
       queryClient.invalidateQueries({ queryKey: ["stocks"] });
       queryClient.invalidateQueries({ queryKey: ["stocks", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Stock updated successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

@@ -8,10 +8,13 @@ import {
   Delete,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EurobondsService } from './eurobonds.service';
 import { CreateEurobondDto, UpdateEurobondDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Eurobonds')
+@ApiBearerAuth()
 @Controller('eurobonds')
 export class EurobondsController {
   constructor(private readonly eurobondsService: EurobondsService) {}

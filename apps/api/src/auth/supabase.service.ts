@@ -31,7 +31,8 @@ export class SupabaseService {
 
   async getUserById(userId: string): Promise<User | null> {
     try {
-      const { data, error } = await this.supabase.auth.admin.getUserById(userId);
+      const { data, error } =
+        await this.supabase.auth.admin.getUserById(userId);
       if (error || !data.user) {
         return null;
       }

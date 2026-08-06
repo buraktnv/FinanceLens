@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { goldApi, CreateGoldInput } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddGoldFormProps {
   onSuccess?: () => void;
@@ -21,7 +22,7 @@ export function AddGoldForm({ onSuccess, onCancel }: AddGoldFormProps) {
     name: "",
     quantity: 0,
     purchasePrice: 0,
-    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseDate: new Date().toISOString().slice(0, 10),
     purity: "",
     location: "",
     notes: "",
@@ -33,7 +34,11 @@ export function AddGoldForm({ onSuccess, onCancel }: AddGoldFormProps) {
       queryClient.invalidateQueries({ queryKey: ["gold"] });
       queryClient.invalidateQueries({ queryKey: ["gold", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Gold holding added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

@@ -37,14 +37,14 @@ function LoginForm() {
         router.refresh();
       }
     } catch {
-      setError("Beklenmeyen bir hata olustu. Lutfen tekrar deneyin.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -57,9 +57,9 @@ function LoginForm() {
         {/* Login Card */}
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Giris Yap</CardTitle>
+            <CardTitle className="text-2xl">Sign In</CardTitle>
             <CardDescription>
-              Hesabiniza giris yapin
+              Sign in to your account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -70,11 +70,11 @@ function LoginForm() {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">E-posta</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ornek@email.com"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -82,7 +82,7 @@ function LoginForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Sifre</Label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -97,19 +97,19 @@ function LoginForm() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Giris yapiliyor...
+                    Signing in...
                   </>
                 ) : (
-                  "Giris Yap"
+                  "Sign In"
                 )}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <div className="text-sm text-center text-muted-foreground">
-              Hesabiniz yok mu?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/register" className="text-primary hover:underline">
-                Kayit Ol
+                Sign Up
               </Link>
             </div>
           </CardFooter>
@@ -118,7 +118,7 @@ function LoginForm() {
         {/* Back to home */}
         <div className="text-center mt-6">
           <Link href="/" className="text-sm text-muted-foreground hover:text-primary">
-            ← Ana Sayfaya Don
+            ← Back to Home
           </Link>
         </div>
       </div>
@@ -129,7 +129,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>

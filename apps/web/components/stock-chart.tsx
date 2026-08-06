@@ -13,6 +13,11 @@ interface StockChartProps {
   currency: string;
 }
 
+interface ChartPoint {
+  date: string;
+  price: number;
+}
+
 type TimeRange = "1d" | "5d" | "1mo" | "3mo" | "6mo" | "1y" | "5y";
 
 const timeRanges: Record<TimeRange, { label: string; days: number; interval: string }> = {
@@ -27,7 +32,7 @@ const timeRanges: Record<TimeRange, { label: string; days: number; interval: str
 
 export function StockChart({ symbol, name, currency }: StockChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("1mo");
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [yAxisDomain, setYAxisDomain] = useState<[number, number]>([0, 100]);
@@ -48,7 +53,7 @@ export function StockChart({ symbol, name, currency }: StockChartProps) {
           const timestamps = result.timestamp;
           const closes = result.indicators.quote[0].close;
 
-          const chartData = timestamps
+          const chartData: ChartPoint[] = timestamps
             .map((ts: number, i: number) => ({
               date: new Date(ts * 1000).toLocaleDateString("tr-TR", {
                 month: "short",
@@ -57,7 +62,7 @@ export function StockChart({ symbol, name, currency }: StockChartProps) {
               }),
               price: closes[i],
             }))
-            .filter((d: any) => d.price !== null);
+            .filter((d): d is ChartPoint => d.price !== null && d.price !== undefined);
 
           const prices = chartData.map((d) => d.price);
           const maxPrice = Math.max(...prices);
@@ -73,9 +78,8 @@ export function StockChart({ symbol, name, currency }: StockChartProps) {
         } else {
           setError("Veri bulunamadi");
         }
-      } catch (err) {
+      } catch {
         setError("Fiyat verisi yuklenirken hata olustu");
-        console.error(err);
       } finally {
         setLoading(false);
       }

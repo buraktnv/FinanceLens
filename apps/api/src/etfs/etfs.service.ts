@@ -17,7 +17,9 @@ export class EtfsService {
         purchasePrice: new Prisma.Decimal(dto.purchasePrice),
         currency: dto.currency,
         purchaseDate: new Date(dto.purchaseDate),
-        expenseRatio: dto.expenseRatio ? new Prisma.Decimal(dto.expenseRatio) : null,
+        expenseRatio: dto.expenseRatio
+          ? new Prisma.Decimal(dto.expenseRatio)
+          : null,
         broker: dto.broker,
         notes: dto.notes,
       },
@@ -59,11 +61,19 @@ export class EtfsService {
       data: {
         ...(dto.symbol && { symbol: dto.symbol }),
         ...(dto.name && { name: dto.name }),
-        ...(dto.quantity !== undefined && { quantity: new Prisma.Decimal(dto.quantity) }),
-        ...(dto.purchasePrice !== undefined && { purchasePrice: new Prisma.Decimal(dto.purchasePrice) }),
+        ...(dto.quantity !== undefined && {
+          quantity: new Prisma.Decimal(dto.quantity),
+        }),
+        ...(dto.purchasePrice !== undefined && {
+          purchasePrice: new Prisma.Decimal(dto.purchasePrice),
+        }),
         ...(dto.currency && { currency: dto.currency }),
         ...(dto.purchaseDate && { purchaseDate: new Date(dto.purchaseDate) }),
-        ...(dto.expenseRatio !== undefined && { expenseRatio: dto.expenseRatio ? new Prisma.Decimal(dto.expenseRatio) : null }),
+        ...(dto.expenseRatio !== undefined && {
+          expenseRatio: dto.expenseRatio
+            ? new Prisma.Decimal(dto.expenseRatio)
+            : null,
+        }),
         ...(dto.broker !== undefined && { broker: dto.broker }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
@@ -85,15 +95,21 @@ export class EtfsService {
       include: { distributions: true },
     });
 
-    const totalValue = etfs.reduce((sum, e) => sum + Number(e.quantity) * Number(e.purchasePrice), 0);
-    const totalDistributions = etfs.reduce((sum, e) =>
-      sum + e.distributions.reduce((dSum, d) => dSum + Number(d.amount), 0), 0);
+    const totalValue = etfs.reduce(
+      (sum, e) => sum + Number(e.quantity) * Number(e.purchasePrice),
+      0,
+    );
+    const totalDistributions = etfs.reduce(
+      (sum, e) =>
+        sum + e.distributions.reduce((dSum, d) => dSum + Number(d.amount), 0),
+      0,
+    );
 
     return {
       totalEtfs: etfs.length,
       totalValue,
       totalDistributions,
-      etfs: etfs.map(e => ({
+      etfs: etfs.map((e) => ({
         id: e.id,
         symbol: e.symbol,
         name: e.name,

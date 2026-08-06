@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { etfsApi, CreateETFInput } from "@/lib/api";
 import { SymbolSearch } from "@/components/symbol-search";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddETFFormProps {
   onSuccess?: () => void;
@@ -24,7 +25,7 @@ export function AddETFForm({ onSuccess, onCancel }: AddETFFormProps) {
     quantity: 0,
     purchasePrice: 0,
     currency: "USD",
-    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseDate: new Date().toISOString().slice(0, 10),
     expenseRatio: 0,
     broker: "",
     notes: "",
@@ -36,7 +37,11 @@ export function AddETFForm({ onSuccess, onCancel }: AddETFFormProps) {
       queryClient.invalidateQueries({ queryKey: ["etfs"] });
       queryClient.invalidateQueries({ queryKey: ["etfs", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("ETF added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to add ETF");
     },
   });
 
@@ -146,7 +151,7 @@ export function AddETFForm({ onSuccess, onCancel }: AddETFFormProps) {
             onChange={(e) => setFormData({ ...formData, expenseRatio: parseFloat(e.target.value) / 100 || 0 })}
             placeholder="Ornek: 0.03"
           />
-          <p className="text-xs text-muted-foreground mt-1">Yuzde olarak girin (ornek: 0.03% icin "0.03")</p>
+          <p className="text-xs text-muted-foreground mt-1">Yuzde olarak girin (ornek: 0.03% icin &quot;0.03&quot;)</p>
         </div>
         <div>
           <Label htmlFor="broker">Broker</Label>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { stocksApi, CreateStockInput } from "@/lib/api";
 import { SymbolSearch } from "@/components/symbol-search";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddStockFormProps {
   onSuccess?: () => void;
@@ -24,7 +25,7 @@ export function AddStockForm({ onSuccess, onCancel }: AddStockFormProps) {
     quantity: 0,
     purchasePrice: 0,
     currency: "TRY",
-    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseDate: new Date().toISOString().slice(0, 10),
     broker: "",
     notes: "",
   });
@@ -35,7 +36,11 @@ export function AddStockForm({ onSuccess, onCancel }: AddStockFormProps) {
       queryClient.invalidateQueries({ queryKey: ["stocks"] });
       queryClient.invalidateQueries({ queryKey: ["stocks", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Stock added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

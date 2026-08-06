@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { expensesApi, CreateExpenseInput } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddExpenseFormProps {
   onSuccess?: () => void;
@@ -23,7 +24,7 @@ export function AddExpenseForm({ onSuccess, onCancel }: AddExpenseFormProps) {
     currency: "TRY",
     category: "FOOD",
     description: "",
-    date: new Date().toISOString().split("T")[0],
+    date: new Date().toISOString().slice(0, 10),
     isRecurring: false,
     frequency: "",
     paymentMethod: "CREDIT_CARD",
@@ -36,7 +37,11 @@ export function AddExpenseForm({ onSuccess, onCancel }: AddExpenseFormProps) {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expenses", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Expense added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -19,13 +20,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Loader2 } from "lucide-react";
-import { eurobondsApi } from "@/lib/api";
+import { Plus, Calendar, Loader2, Pencil, Trash2 } from "lucide-react";
+import { eurobondsApi, Eurobond } from "@/lib/api";
 import { AddEurobondForm } from "@/components/forms/add-eurobond-form";
+import { EditEurobondForm } from "@/components/forms/edit-eurobond-form";
 
 export default function EurobondsPage() {
+  const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingEurobond, setEditingEurobond] = useState<Eurobond | null>(null);
+  const [deletingEurobond, setDeletingEurobond] = useState<Eurobond | null>(null);
   const { data: eurobonds = [], isLoading: bondsLoading, error: bondsError } = useQuery({
     queryKey: ["eurobonds"],
     queryFn: () => eurobondsApi.getAll(),
@@ -37,6 +52,23 @@ export default function EurobondsPage() {
   });
 
   const isLoading = bondsLoading || summaryLoading;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => eurobondsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["eurobonds"] });
+      queryClient.invalidateQueries({ queryKey: ["eurobonds", "summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Eurobond deleted successfully");
+      setDeletingEurobond(null);
+    },
+  });
+
+  const handleDelete = () => {
+    if (deletingEurobond) {
+      deleteMutation.mutate(deletingEurobond.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -50,10 +82,10 @@ export default function EurobondsPage() {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">
-          {bondsError instanceof Error ? bondsError.message : "Veri yuklenirken hata olustu"}
+          {bondsError instanceof Error ? bondsError.message : "Error loading data"}
         </p>
         <Button onClick={() => window.location.reload()} className="mt-4">
-          Tekrar Dene
+          Try Again
         </Button>
       </div>
     );
@@ -67,49 +99,49 @@ export default function EurobondsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Eurobond</h1>
-          <p className="text-muted-foreground">Eurobond portfoyunuzu yonetin</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Eurobonds</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your eurobond portfolio</p>
         </div>
-        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
-          Yeni Eurobond Ekle
+          Add New Eurobond
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Nominal Deger</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Face Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalFaceValue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">${totalFaceValue.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Guncel Deger</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalCurrentValue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">${totalCurrentValue.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Yillik Kupon Geliri</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Annual Coupon Income</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${annualCouponIncome.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">${annualCouponIncome.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ortalama Getiri</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Average Yield</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">%{avgYield}</div>
+            <div className="text-xl sm:text-2xl font-bold">%{avgYield}</div>
           </CardContent>
         </Card>
       </div>
@@ -117,21 +149,22 @@ export default function EurobondsPage() {
       {/* Eurobonds Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Eurobond Portfoyu</CardTitle>
-          <CardDescription>Tum eurobondlariniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Eurobond Portfolio</CardTitle>
+          <CardDescription className="text-sm">All your eurobonds</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {eurobonds.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tahvil</TableHead>
-                  <TableHead>ISIN</TableHead>
-                  <TableHead className="text-right">Nominal</TableHead>
-                  <TableHead className="text-right">Alis Fiyati</TableHead>
-                  <TableHead className="text-right">Kupon</TableHead>
-                  <TableHead className="text-right">Vade</TableHead>
-                  <TableHead className="text-right">Yillik Gelir</TableHead>
+                  <TableHead className="text-sm">Bond</TableHead>
+                  <TableHead className="text-sm">ISIN</TableHead>
+                  <TableHead className="text-right text-sm">Face Value</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Price</TableHead>
+                  <TableHead className="text-right text-sm">Coupon</TableHead>
+                  <TableHead className="text-right text-sm">Maturity</TableHead>
+                  <TableHead className="text-right text-sm">Annual Income</TableHead>
+                  <TableHead className="text-right text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -152,14 +185,36 @@ export default function EurobondsPage() {
                       <TableCell className="text-right">
                         <Badge variant="secondary">%{couponRate.toFixed(2)}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right text-sm">
                         <div className="flex items-center justify-end gap-1">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                          <span>{maturityDate.toLocaleDateString("tr-TR")}</span>
-                          <span className="text-muted-foreground text-xs">({yearsToMaturity} yil)</span>
+                          <span>{maturityDate.toLocaleDateString("en-US")}</span>
+                          <span className="text-muted-foreground text-xs">({yearsToMaturity} yrs)</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-green-600">${annualIncome.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm text-green-600">${annualIncome.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditingEurobond(bond)}
+                            title="Edit"
+                            className="h-8 w-8"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeletingEurobond(bond)}
+                            title="Delete"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -167,10 +222,10 @@ export default function EurobondsPage() {
             </Table>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Henuz eurobond eklenmedi</p>
+              <p className="text-sm sm:text-base text-muted-foreground">No eurobonds added yet</p>
               <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
-                Ilk Eurobondunuzu Ekleyin
+                Add Your First Eurobond
               </Button>
             </div>
           )}
@@ -181,9 +236,9 @@ export default function EurobondsPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni Eurobond Ekle</DialogTitle>
+            <DialogTitle>Add New Eurobond</DialogTitle>
             <DialogDescription>
-              Eurobond bilgilerini manuel olarak girin
+              Manually enter eurobond details
             </DialogDescription>
           </DialogHeader>
           <AddEurobondForm
@@ -193,11 +248,58 @@ export default function EurobondsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Eurobond Dialog */}
+      <Dialog open={!!editingEurobond} onOpenChange={(open) => !open && setEditingEurobond(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Eurobond</DialogTitle>
+            <DialogDescription>
+              Update your eurobond details
+            </DialogDescription>
+          </DialogHeader>
+          {editingEurobond && (
+            <EditEurobondForm
+              eurobond={editingEurobond}
+              onSuccess={() => setEditingEurobond(null)}
+              onCancel={() => setEditingEurobond(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingEurobond} onOpenChange={(open) => !open && setDeletingEurobond(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Eurobond</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingEurobond && (
+                <>
+                  Are you sure you want to delete <strong>{deletingEurobond.name}</strong>?
+                  This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Upcoming Coupons */}
       <Card>
         <CardHeader>
-          <CardTitle>Kupon Odemeleri</CardTitle>
-          <CardDescription>Alinan kupon odemeleri</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Coupon Payments</CardTitle>
+          <CardDescription className="text-sm">Received coupon payments</CardDescription>
         </CardHeader>
         <CardContent>
           {eurobonds.some(b => b.couponPayments && b.couponPayments.length > 0) ? (
@@ -207,14 +309,14 @@ export default function EurobondsPage() {
                   <CouponItem
                     key={payment.id}
                     bond={bond.name}
-                    date={new Date(payment.paymentDate).toLocaleDateString("tr-TR")}
+                    date={new Date(payment.paymentDate).toLocaleDateString("en-US")}
                     amount={`$${Number(payment.amount).toLocaleString()}`}
                   />
                 ))
               ).slice(0, 5)}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-4">Henuz kupon odemesi yok</p>
+            <p className="text-sm sm:text-base text-muted-foreground text-center py-4">No coupon payments yet</p>
           )}
         </CardContent>
       </Card>

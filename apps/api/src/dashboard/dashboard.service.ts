@@ -6,7 +6,17 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getOverview(userId: string) {
-    const [stocks, etfs, eurobonds, cash, gold, silver, incomes, expenses, loans] = await Promise.all([
+    const [
+      stocks,
+      etfs,
+      eurobonds,
+      cash,
+      gold,
+      silver,
+      incomes,
+      expenses,
+      loans,
+    ] = await Promise.all([
       this.prisma.stock.findMany({ where: { userId } }),
       this.prisma.eTF.findMany({ where: { userId } }),
       this.prisma.eurobond.findMany({ where: { userId } }),
@@ -19,28 +29,52 @@ export class DashboardService {
     ]);
 
     // Calculate stock values
-    const stocksValue = stocks.reduce((sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice), 0);
+    const stocksValue = stocks.reduce(
+      (sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice),
+      0,
+    );
 
     // Calculate ETF values
-    const etfsValue = etfs.reduce((sum, e) => sum + Number(e.quantity) * Number(e.purchasePrice), 0);
+    const etfsValue = etfs.reduce(
+      (sum, e) => sum + Number(e.quantity) * Number(e.purchasePrice),
+      0,
+    );
 
     // Calculate Eurobond values (face value * quantity)
-    const eurobondsValue = eurobonds.reduce((sum, e) => sum + Number(e.faceValue) * Number(e.quantity), 0);
+    const eurobondsValue = eurobonds.reduce(
+      (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
+      0,
+    );
 
     // Calculate cash total (sum all balances for now - no currency conversion yet)
     const cashValue = cash.reduce((sum, c) => sum + Number(c.balance), 0);
 
     // Calculate gold value (just purchase cost for now - current market price will be fetched on frontend)
-    const goldValue = gold.reduce((sum, g) => sum + Number(g.quantity) * Number(g.purchasePrice), 0);
+    const goldValue = gold.reduce(
+      (sum, g) => sum + Number(g.quantity) * Number(g.purchasePrice),
+      0,
+    );
 
     // Calculate silver value (just purchase cost for now - current market price will be fetched on frontend)
-    const silverValue = silver.reduce((sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice), 0);
+    const silverValue = silver.reduce(
+      (sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice),
+      0,
+    );
 
     // Calculate loan balances
-    const totalDebt = loans.reduce((sum, l) => sum + Number(l.remainingBalance || l.principalAmount), 0);
+    const totalDebt = loans.reduce(
+      (sum, l) => sum + Number(l.remainingBalance || l.principalAmount),
+      0,
+    );
 
     // Net worth
-    const totalAssets = stocksValue + etfsValue + eurobondsValue + cashValue + goldValue + silverValue;
+    const totalAssets =
+      stocksValue +
+      etfsValue +
+      eurobondsValue +
+      cashValue +
+      goldValue +
+      silverValue;
     const netWorth = totalAssets - totalDebt;
 
     return {
@@ -60,7 +94,13 @@ export class DashboardService {
         income: incomes.total,
         expenses: expenses.total,
         savings: incomes.total - expenses.total,
-        savingsRate: incomes.total > 0 ? ((incomes.total - expenses.total) / incomes.total * 100).toFixed(1) : 0,
+        savingsRate:
+          incomes.total > 0
+            ? (
+                ((incomes.total - expenses.total) / incomes.total) *
+                100
+              ).toFixed(1)
+            : 0,
       },
     };
   }
@@ -68,7 +108,14 @@ export class DashboardService {
   private async getMonthlyIncomes(userId: string) {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const endDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
     const incomes = await this.prisma.income.findMany({
       where: {
@@ -86,7 +133,14 @@ export class DashboardService {
   private async getMonthlyExpenses(userId: string) {
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const endDate = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
     const expenses = await this.prisma.expense.findMany({
       where: {
@@ -116,7 +170,7 @@ export class DashboardService {
     ]);
 
     const transactions = [
-      ...incomes.map(i => ({
+      ...incomes.map((i) => ({
         id: i.id,
         type: 'income' as const,
         amount: Number(i.amount),
@@ -125,7 +179,7 @@ export class DashboardService {
         date: i.date,
         currency: i.currency,
       })),
-      ...expenses.map(e => ({
+      ...expenses.map((e) => ({
         id: e.id,
         type: 'expense' as const,
         amount: -Number(e.amount),

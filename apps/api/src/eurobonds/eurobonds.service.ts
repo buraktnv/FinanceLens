@@ -65,14 +65,24 @@ export class EurobondsService {
       data: {
         ...(dto.name && { name: dto.name }),
         ...(dto.isin !== undefined && { isin: dto.isin }),
-        ...(dto.faceValue !== undefined && { faceValue: new Prisma.Decimal(dto.faceValue) }),
-        ...(dto.purchasePrice !== undefined && { purchasePrice: new Prisma.Decimal(dto.purchasePrice) }),
-        ...(dto.quantity !== undefined && { quantity: new Prisma.Decimal(dto.quantity) }),
-        ...(dto.couponRate !== undefined && { couponRate: new Prisma.Decimal(dto.couponRate) }),
+        ...(dto.faceValue !== undefined && {
+          faceValue: new Prisma.Decimal(dto.faceValue),
+        }),
+        ...(dto.purchasePrice !== undefined && {
+          purchasePrice: new Prisma.Decimal(dto.purchasePrice),
+        }),
+        ...(dto.quantity !== undefined && {
+          quantity: new Prisma.Decimal(dto.quantity),
+        }),
+        ...(dto.couponRate !== undefined && {
+          couponRate: new Prisma.Decimal(dto.couponRate),
+        }),
         ...(dto.currency && { currency: dto.currency }),
         ...(dto.purchaseDate && { purchaseDate: new Date(dto.purchaseDate) }),
         ...(dto.maturityDate && { maturityDate: new Date(dto.maturityDate) }),
-        ...(dto.couponFrequency !== undefined && { couponFrequency: dto.couponFrequency }),
+        ...(dto.couponFrequency !== undefined && {
+          couponFrequency: dto.couponFrequency,
+        }),
         ...(dto.broker !== undefined && { broker: dto.broker }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
@@ -98,16 +108,26 @@ export class EurobondsService {
       include: { couponPayments: true },
     });
 
-    const totalFaceValue = eurobonds.reduce((sum, e) => sum + Number(e.faceValue) * Number(e.quantity), 0);
-    const totalCurrentValue = eurobonds.reduce((sum, e) => sum + Number(e.purchasePrice) * Number(e.quantity) / 100, 0);
-    const annualCouponIncome = eurobonds.reduce((sum, e) => sum + Number(e.faceValue) * Number(e.quantity) * Number(e.couponRate), 0);
+    const totalFaceValue = eurobonds.reduce(
+      (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
+      0,
+    );
+    const totalCurrentValue = eurobonds.reduce(
+      (sum, e) => sum + (Number(e.purchasePrice) * Number(e.quantity)) / 100,
+      0,
+    );
+    const annualCouponIncome = eurobonds.reduce(
+      (sum, e) =>
+        sum + Number(e.faceValue) * Number(e.quantity) * Number(e.couponRate),
+      0,
+    );
 
     return {
       totalBonds: eurobonds.length,
       totalFaceValue,
       totalCurrentValue,
       annualCouponIncome,
-      eurobonds: eurobonds.map(e => ({
+      eurobonds: eurobonds.map((e) => ({
         id: e.id,
         name: e.name,
         isin: e.isin,

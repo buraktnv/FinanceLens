@@ -8,16 +8,22 @@ import {
   Delete,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { StocksService } from './stocks.service';
 import { CreateStockDto, UpdateStockDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Stocks')
+@ApiBearerAuth()
 @Controller('stocks')
 export class StocksController {
   constructor(private readonly stocksService: StocksService) {}
 
   @Post()
-  create(@CurrentUser('id') userId: string, @Body() createStockDto: CreateStockDto) {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() createStockDto: CreateStockDto,
+  ) {
     return this.stocksService.create(userId, createStockDto);
   }
 

@@ -1,3 +1,6 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,176 +9,237 @@ import { Separator } from "@/components/ui/separator";
 import {
   Wallet,
   TrendingUp,
-  Landmark,
-  BarChart3,
-  Home,
   CreditCard,
   ArrowLeft,
-  PiggyBank,
+  Loader2,
 } from "lucide-react";
+import { dashboardApi, incomesApi, expensesApi } from "@/lib/api";
 
 export default function StatusPage() {
-  // Mock data - total financial status
-  const netWorth = 2_450_000;
-  const totalAssets = 2_850_000;
-  const totalLiabilities = 400_000;
+  const { data: overview, isLoading, error } = useQuery({
+    queryKey: ["dashboard", "overview"],
+    queryFn: () => dashboardApi.getOverview(),
+  });
+
+  const { data: incomeSummary } = useQuery({
+    queryKey: ["incomes", "summary"],
+    queryFn: () => incomesApi.getSummary(),
+  });
+
+  const { data: expenseSummary } = useQuery({
+    queryKey: ["expenses", "summary"],
+    queryFn: () => expensesApi.getSummary(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error || !overview) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-red-500">
+          {error instanceof Error ? error.message : "Error loading data"}
+        </p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
+
+  const netWorth = overview.netWorth;
+  const totalAssets = overview.totalAssets;
+  const totalLiabilities = overview.totalDebt;
+  const monthlyExpenses = overview.monthly.expenses;
+  const monthlyIncome = overview.monthly.income;
+  const monthlySavings = overview.monthly.savings;
+  const savingsRate = Number(overview.monthly.savingsRate) || 0;
+
+  // Derived metrics
+  const monthsOfSavings = monthlyExpenses > 0 ? Math.floor(netWorth / monthlyExpenses) : 0;
+  const investmentsValue =
+    overview.breakdown.stocks.value +
+    overview.breakdown.etfs.value +
+    overview.breakdown.eurobonds.value;
+  const cashAndMetalsValue =
+    overview.breakdown.cash.value +
+    overview.breakdown.gold.value +
+    overview.breakdown.silver.value;
+
+  const formatCurrency = (value: number) =>
+    `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Wallet className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">FinanceLens</span>
+      <header className="bg-background border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <Wallet className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                <span className="text-xl sm:text-2xl font-bold">FinanceLens</span>
+              </div>
             </div>
+            <h1 className="text-lg sm:text-xl font-semibold">Financial Status Summary</h1>
           </div>
-          <h1 className="text-xl font-semibold">Finansal Durum Ozeti</h1>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 sm:py-8">
         {/* Net Worth Summary */}
-        <Card className="mb-8">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-lg text-muted-foreground">Net Deger</CardTitle>
+        <Card className="mb-6 sm:mb-8">
+          <CardHeader className="text-center pb-3">
+            <CardTitle className="text-base sm:text-lg text-muted-foreground">Net Worth</CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <div className="text-5xl font-bold text-primary mb-4">
-              ₺{netWorth.toLocaleString()}
-            </div>
-            <div className="flex justify-center gap-8">
-              <div>
-                <p className="text-sm text-muted-foreground">Toplam Varlik</p>
-                <p className="text-xl font-semibold text-green-600">₺{totalAssets.toLocaleString()}</p>
+          <CardContent className="space-y-6">
+            {/* Net Worth Amount */}
+            <div className="text-center">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-3">
+                {formatCurrency(netWorth)}
               </div>
-              <Separator orientation="vertical" className="h-12" />
-              <div>
-                <p className="text-sm text-muted-foreground">Toplam Borc</p>
-                <p className="text-xl font-semibold text-red-600">₺{totalLiabilities.toLocaleString()}</p>
+              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Assets: </span>
+                  <span className="font-semibold text-green-600">{formatCurrency(totalAssets)}</span>
+                </div>
+                <span className="hidden sm:inline text-muted-foreground">•</span>
+                <div>
+                  <span className="text-muted-foreground">Debt: </span>
+                  <span className="font-semibold text-red-600">{formatCurrency(totalLiabilities)}</span>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Key Financial Metrics */}
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">Savings Last</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{monthsOfSavings} Months</p>
+                <p className="text-xs text-muted-foreground">At {formatCurrency(monthlyExpenses)}/mo expenses</p>
+              </div>
+              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">Monthly Savings</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(monthlySavings)}</p>
+                <p className="text-xs text-muted-foreground">{savingsRate.toFixed(1)}% of income</p>
+              </div>
+              <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-1">Save Rate</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{savingsRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(monthlyIncome)}/mo income</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Asset Breakdown */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-          {/* Stocks */}
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3 mb-6 sm:mb-8">
+          {/* Investments */}
           <AssetCard
-            icon={<TrendingUp className="h-6 w-6" />}
-            title="Hisse Senetleri"
-            value="₺485,230"
-            change="+9.52%"
+            icon={<TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />}
+            title="Investments"
+            value={formatCurrency(investmentsValue)}
             items={[
-              { label: "THYAO", value: "₺156,200" },
-              { label: "AAPL", value: "₺145,500" },
-              { label: "GOOGL", value: "₺93,120" },
-              { label: "Diger", value: "₺90,410" },
+              { label: "Stocks", value: formatCurrency(overview.breakdown.stocks.value), extra: `${overview.breakdown.stocks.count} positions` },
+              { label: "ETFs", value: formatCurrency(overview.breakdown.etfs.value), extra: `${overview.breakdown.etfs.count} funds` },
+              { label: "Eurobonds", value: formatCurrency(overview.breakdown.eurobonds.value), extra: `${overview.breakdown.eurobonds.count} bonds` },
             ]}
           />
 
-          {/* ETFs */}
+          {/* Cash & Precious Metals */}
           <AssetCard
-            icon={<BarChart3 className="h-6 w-6" />}
-            title="ETF'ler"
-            value="$24,850"
-            change="+7.8%"
+            icon={<Wallet className="h-5 w-5 sm:h-6 sm:w-6" />}
+            title="Cash & Metals"
+            value={formatCurrency(cashAndMetalsValue)}
             items={[
-              { label: "SPY", value: "$9,570" },
-              { label: "QQQ", value: "$6,185" },
-              { label: "VTI", value: "$7,167" },
-              { label: "ACWI", value: "$5,260" },
+              { label: "Cash Accounts", value: formatCurrency(overview.breakdown.cash.value), extra: `${overview.breakdown.cash.count} accounts` },
+              { label: "Gold Holdings", value: formatCurrency(overview.breakdown.gold.value), extra: `${overview.breakdown.gold.count} holdings` },
+              { label: "Silver Holdings", value: formatCurrency(overview.breakdown.silver.value), extra: `${overview.breakdown.silver.count} holdings` },
             ]}
           />
 
-          {/* Eurobonds */}
-          <AssetCard
-            icon={<Landmark className="h-6 w-6" />}
-            title="Eurobond"
-            value="$28,650"
-            change="+5.75%"
-            subtitle="Yillik Kupon"
-            items={[
-              { label: "Turkey 2030", value: "$9,550" },
-              { label: "Turkey 2034", value: "$13,800" },
-              { label: "Turkey 2028", value: "$4,900" },
-            ]}
-          />
-
-          {/* Real Estate */}
-          <AssetCard
-            icon={<Home className="h-6 w-6" />}
-            title="Gayrimenkul"
-            value="₺1,850,000"
-            change="+15,000/ay"
-            subtitle="Kira Geliri"
-            items={[
-              { label: "Kadikoy Daire", value: "₺1,200,000", extra: "Kirada: ₺12,000/ay" },
-              { label: "Bodrum Yazlik", value: "₺650,000", extra: "Bos" },
-            ]}
-          />
-
-          {/* Savings */}
-          <AssetCard
-            icon={<PiggyBank className="h-6 w-6" />}
-            title="Nakit & Mevduat"
-            value="₺185,000"
-            change="+%32 faiz"
-            items={[
-              { label: "Vadesiz Hesap", value: "₺35,000" },
-              { label: "Vadeli Mevduat", value: "₺150,000" },
-            ]}
-          />
-
-          {/* Loans */}
+          {/* Liabilities */}
           <LiabilityCard
-            icon={<CreditCard className="h-6 w-6" />}
-            title="Krediler"
-            value="₺400,000"
+            icon={<CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />}
+            title="Liabilities"
+            value={formatCurrency(totalLiabilities)}
             items={[
-              { label: "Konut Kredisi", value: "₺380,000", extra: "%1.89 faiz, 84 ay kaldi" },
-              { label: "Ihtiyac Kredisi", value: "₺20,000", extra: "%2.49 faiz, 12 ay kaldi" },
+              { label: "Loans", value: formatCurrency(overview.breakdown.loans.balance), extra: `${overview.breakdown.loans.count} active loan${overview.breakdown.loans.count !== 1 ? "s" : ""}` },
             ]}
           />
         </div>
 
-        {/* Monthly Summary */}
+        {/* Monthly Cash Flow */}
         <Card>
           <CardHeader>
-            <CardTitle>Aylik Ozet</CardTitle>
-            <CardDescription>Bu ayki gelir-gider durumu</CardDescription>
+            <CardTitle className="text-lg sm:text-xl">Monthly Cash Flow</CardTitle>
+            <CardDescription className="text-sm">Current month income and expenses breakdown</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <SummaryItem label="Toplam Gelir" value="₺71,700" type="income" />
-              <SummaryItem label="Toplam Gider" value="₺28,500" type="expense" />
-              <SummaryItem label="Net Tasarruf" value="₺43,200" type="savings" />
-              <SummaryItem label="Tasarruf Orani" value="%60.3" type="rate" />
+          <CardContent className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
+              <SummaryItem label="Income" value={formatCurrency(monthlyIncome)} type="income" />
+              <SummaryItem label="Expenses" value={formatCurrency(monthlyExpenses)} type="expense" />
+              <SummaryItem label="Savings" value={formatCurrency(monthlySavings)} type="savings" />
+              <SummaryItem label="Save Rate" value={`${savingsRate.toFixed(1)}%`} type="rate" />
             </div>
 
-            <Separator className="my-6" />
+            {/* Detailed Breakdown */}
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
+              {/* Income Sources */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">Income Sources</h3>
+                <div className="space-y-2">
+                  {incomeSummary && Object.entries(incomeSummary.byType).length > 0 ? (
+                    Object.entries(incomeSummary.byType).map(([label, amount]) => {
+                      const pct = monthlyIncome > 0 ? (amount / monthlyIncome) * 100 : 0;
+                      return (
+                        <CashFlowItem
+                          key={label}
+                          label={label}
+                          value={formatCurrency(amount)}
+                          percentage={pct}
+                          color="bg-green-500"
+                        />
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No income data</p>
+                  )}
+                </div>
+              </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Birikimler Ne Kadar Yeter?</p>
-                <p className="text-3xl font-bold text-blue-600">86 Ay</p>
-                <p className="text-xs text-muted-foreground">~7 yil (mevcut giderlerle)</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Pasif Gelir</p>
-                <p className="text-3xl font-bold text-green-600">₺16,500/ay</p>
-                <p className="text-xs text-muted-foreground">Kira + Temettu + Faiz</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <p className="text-sm text-muted-foreground">Finansal Bagimsizlik</p>
-                <p className="text-3xl font-bold text-purple-600">%58</p>
-                <p className="text-xs text-muted-foreground">Pasif gelir / Gider</p>
+              {/* Expense Categories */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground">Expense Categories</h3>
+                <div className="space-y-2">
+                  {expenseSummary && Object.entries(expenseSummary.byCategory).length > 0 ? (
+                    Object.entries(expenseSummary.byCategory).map(([label, amount]) => {
+                      const pct = monthlyExpenses > 0 ? (amount / monthlyExpenses) * 100 : 0;
+                      return (
+                        <CashFlowItem
+                          key={label}
+                          label={label}
+                          value={formatCurrency(amount)}
+                          percentage={pct}
+                          color="bg-red-500"
+                        />
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No expense data</p>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -189,42 +253,33 @@ function AssetCard({
   icon,
   title,
   value,
-  change,
-  subtitle,
   items,
 }: {
   icon: React.ReactNode;
   title: string;
   value: string;
-  change: string;
-  subtitle?: string;
   items: { label: string; value: string; extra?: string }[];
 }) {
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary/10 rounded-lg text-primary">{icon}</div>
-            <CardTitle className="text-lg">{title}</CardTitle>
-          </div>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg text-primary">{icon}</div>
+          <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <p className="text-2xl font-bold">{value}</p>
-          <Badge variant="secondary" className="text-green-600">
-            {change} {subtitle && <span className="text-muted-foreground ml-1">{subtitle}</span>}
-          </Badge>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="text-xl sm:text-2xl font-bold">{value}</p>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {items.map((item, i) => (
-            <div key={i} className="flex justify-between items-center text-sm">
-              <div>
-                <span>{item.label}</span>
-                {item.extra && <p className="text-xs text-muted-foreground">{item.extra}</p>}
+            <div key={i} className="flex justify-between items-center text-xs sm:text-sm">
+              <div className="min-w-0 flex-1">
+                <span className="truncate block">{item.label}</span>
+                {item.extra && <p className="text-xs text-muted-foreground truncate">{item.extra}</p>}
               </div>
-              <span className="font-medium">{item.value}</span>
+              <span className="font-medium ml-2 shrink-0">{item.value}</span>
             </div>
           ))}
         </div>
@@ -246,27 +301,25 @@ function LiabilityCard({
 }) {
   return (
     <Card className="border-red-200">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-red-100 rounded-lg text-red-600">{icon}</div>
-            <CardTitle className="text-lg">{title}</CardTitle>
-          </div>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg text-red-600">{icon}</div>
+          <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="mb-4">
-          <p className="text-2xl font-bold text-red-600">{value}</p>
-          <Badge variant="destructive">Borc</Badge>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="text-xl sm:text-2xl font-bold text-red-600">{value}</p>
+          <Badge variant="destructive" className="text-xs">Debt</Badge>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {items.map((item, i) => (
-            <div key={i} className="flex justify-between items-start text-sm">
-              <div>
-                <span>{item.label}</span>
-                {item.extra && <p className="text-xs text-muted-foreground">{item.extra}</p>}
+            <div key={i} className="flex justify-between items-start text-xs sm:text-sm">
+              <div className="min-w-0 flex-1">
+                <span className="truncate block">{item.label}</span>
+                {item.extra && <p className="text-xs text-muted-foreground truncate">{item.extra}</p>}
               </div>
-              <span className="font-medium text-red-600">{item.value}</span>
+              <span className="font-medium text-red-600 ml-2 shrink-0">{item.value}</span>
             </div>
           ))}
         </div>
@@ -292,9 +345,36 @@ function SummaryItem({
   };
 
   return (
-    <div className="text-center p-4 bg-gray-100 rounded-lg">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-bold ${colors[type]}`}>{value}</p>
+    <div className="text-center p-3 sm:p-4 bg-gray-100 rounded-lg">
+      <p className="text-xs sm:text-sm text-muted-foreground">{label}</p>
+      <p className={`text-lg sm:text-2xl font-bold ${colors[type]}`}>{value}</p>
+    </div>
+  );
+}
+
+function CashFlowItem({
+  label,
+  value,
+  percentage,
+  color,
+}: {
+  label: string;
+  value: string;
+  percentage: number;
+  color: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs sm:text-sm">
+        <span>{label}</span>
+        <span className="font-medium">{value}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex-1">
+          <div className={`h-full ${color} rounded-full`} style={{ width: `${percentage}%` }} />
+        </div>
+        <span className="text-xs text-muted-foreground w-10 text-right">{percentage.toFixed(1)}%</span>
+      </div>
     </div>
   );
 }

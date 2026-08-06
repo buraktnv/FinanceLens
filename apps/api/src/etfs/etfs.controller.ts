@@ -8,10 +8,13 @@ import {
   Delete,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EtfsService } from './etfs.service';
 import { CreateEtfDto, UpdateEtfDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('ETFs')
+@ApiBearerAuth()
 @Controller('etfs')
 export class EtfsController {
   constructor(private readonly etfsService: EtfsService) {}

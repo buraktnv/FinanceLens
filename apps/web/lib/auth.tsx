@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session, SupabaseClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { createClient } from './supabase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -21,8 +22,6 @@ function getSupabaseClient(): SupabaseClient | null {
     return null;
   }
   try {
-    // Dynamic require to avoid SSR issues
-    const { createClient } = require('./supabase/client');
     return createClient();
   } catch {
     return null;

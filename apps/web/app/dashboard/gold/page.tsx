@@ -34,6 +34,7 @@ import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, TrendingDown } from 
 import { goldApi, preciousMetalsApi, Gold } from "@/lib/api";
 import { AddGoldForm } from "@/components/forms/add-gold-form";
 import { EditGoldForm } from "@/components/forms/edit-gold-form";
+import { toast } from "sonner";
 
 export default function GoldPage() {
   const queryClient = useQueryClient();
@@ -62,6 +63,7 @@ export default function GoldPage() {
       queryClient.invalidateQueries({ queryKey: ["gold"] });
       queryClient.invalidateQueries({ queryKey: ["gold", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Gold holding deleted successfully");
       setDeletingGold(null);
     },
   });
@@ -73,8 +75,8 @@ export default function GoldPage() {
         const priceData = await preciousMetalsApi.getGoldPrice();
         setCurrentPrice(priceData.pricePerGram);
         setLastUpdated(new Date());
-      } catch (error) {
-        console.error("Failed to fetch gold price:", error);
+      } catch {
+        // Price fetch failed — keep last known price
       }
     };
 
@@ -89,7 +91,7 @@ export default function GoldPage() {
   );
 
   const formatCurrency = (value: number, decimals = 2) => {
-    return `₺${value.toLocaleString("tr-TR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
   };
 
   const handleDelete = () => {
@@ -108,8 +110,8 @@ export default function GoldPage() {
 
   if (holdingsError) {
     return (
-      <div className="text-center text-red-600">
-        Hata: {holdingsError instanceof Error ? holdingsError.message : "Bilinmeyen hata"}
+      <div className="text-center text-red-600 py-8">
+        Error: {holdingsError instanceof Error ? holdingsError.message : "Unknown error"}
       </div>
     );
   }
@@ -123,47 +125,47 @@ export default function GoldPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Altin Portfoyu</h1>
-          <p className="text-muted-foreground">Tum altin varliklariniz</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gold Portfolio</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">All your gold assets</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+        <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Yeni Altin Ekle
+          Add New Gold
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Gram</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Grams</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalQuantity.toFixed(3)} g</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalQuantity.toFixed(3)} g</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Maliyet</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalCost)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost)}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Guncel Deger</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(currentValue)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentValue)}</div>
             {currentPrice && (
               <p className="text-xs text-muted-foreground mt-1">
-                ₺{currentPrice.toFixed(3)}/gram
+                ${currentPrice.toFixed(3)}/gram
                 {lastUpdated && (
                   <span className="ml-2">
-                    (Guncelleme: {lastUpdated.toLocaleTimeString("tr-TR")})
+                    (Updated: {lastUpdated.toLocaleTimeString("en-US")})
                   </span>
                 )}
               </p>
@@ -172,10 +174,10 @@ export default function GoldPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Kar/Zarar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Profit/Loss</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold flex items-center ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-xl sm:text-2xl font-bold flex items-center ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitLoss >= 0 ? <TrendingUp className="mr-1 h-5 w-5" /> : <TrendingDown className="mr-1 h-5 w-5" />}
               {formatCurrency(Math.abs(profitLoss))}
             </div>
@@ -188,11 +190,11 @@ export default function GoldPage() {
 
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Altin ara..."
-            className="pl-10"
+            placeholder="Search gold..."
+            className="pl-10 text-sm sm:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -202,26 +204,26 @@ export default function GoldPage() {
       {/* Gold Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Altin Portfoyu</CardTitle>
-          <CardDescription>Tum altin varliklariniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Gold Portfolio</CardTitle>
+          <CardDescription className="text-sm">All your gold assets</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {filteredHoldings.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Henuz altin eklenmemis.
+            <div className="text-center py-8 text-sm sm:text-base text-muted-foreground">
+              No gold added yet.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Altin Adi</TableHead>
-                  <TableHead className="text-right">Gram</TableHead>
-                  <TableHead className="text-right">Alis Fiyati</TableHead>
-                  <TableHead className="text-right">Guncel Fiyat</TableHead>
-                  <TableHead className="text-right">Guncel Deger</TableHead>
-                  <TableHead className="text-right">Kar/Zarar</TableHead>
-                  <TableHead>Ayar</TableHead>
-                  <TableHead className="text-right">Islemler</TableHead>
+                  <TableHead className="text-sm">Gold Name</TableHead>
+                  <TableHead className="text-right text-sm">Grams</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Price</TableHead>
+                  <TableHead className="text-right text-sm">Current Price</TableHead>
+                  <TableHead className="text-right text-sm">Current Value</TableHead>
+                  <TableHead className="text-right text-sm">Profit/Loss</TableHead>
+                  <TableHead className="text-sm">Purity</TableHead>
+                  <TableHead className="text-right text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,14 +253,15 @@ export default function GoldPage() {
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>{gold.purity || "-"}</TableCell>
+                      <TableCell className="text-sm">{gold.purity || "-"}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setEditingGold(gold)}
-                            title="Duzenle"
+                            title="Edit"
+                            className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -266,8 +269,8 @@ export default function GoldPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeletingGold(gold)}
-                            title="Sil"
-                            className="text-red-600 hover:text-red-700"
+                            title="Delete"
+                            className="text-red-600 hover:text-red-700 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -286,9 +289,9 @@ export default function GoldPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni Altin Ekle</DialogTitle>
+            <DialogTitle>Add New Gold</DialogTitle>
             <DialogDescription>
-              Altin varligi bilgilerini girin
+              Enter your gold asset details
             </DialogDescription>
           </DialogHeader>
           <AddGoldForm
@@ -302,9 +305,9 @@ export default function GoldPage() {
       <Dialog open={!!editingGold} onOpenChange={(open) => !open && setEditingGold(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Altin Duzenle</DialogTitle>
+            <DialogTitle>Edit Gold</DialogTitle>
             <DialogDescription>
-              Altin varligi bilgilerini guncelleyin
+              Update your gold asset details
             </DialogDescription>
           </DialogHeader>
           {editingGold && (
@@ -321,20 +324,20 @@ export default function GoldPage() {
       <AlertDialog open={!!deletingGold} onOpenChange={(open) => !open && setDeletingGold(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Altini Sil?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Gold?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu islemi geri alamazsiniz. Altin kalici olarak silinecektir.
+              This action cannot be undone. The gold asset will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Iptal</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sil
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

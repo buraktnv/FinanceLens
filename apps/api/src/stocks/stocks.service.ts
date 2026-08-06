@@ -64,12 +64,22 @@ export class StocksService {
       data: {
         ...(updateStockDto.symbol && { symbol: updateStockDto.symbol }),
         ...(updateStockDto.name && { name: updateStockDto.name }),
-        ...(updateStockDto.quantity !== undefined && { quantity: new Prisma.Decimal(updateStockDto.quantity) }),
-        ...(updateStockDto.purchasePrice !== undefined && { purchasePrice: new Prisma.Decimal(updateStockDto.purchasePrice) }),
+        ...(updateStockDto.quantity !== undefined && {
+          quantity: new Prisma.Decimal(updateStockDto.quantity),
+        }),
+        ...(updateStockDto.purchasePrice !== undefined && {
+          purchasePrice: new Prisma.Decimal(updateStockDto.purchasePrice),
+        }),
         ...(updateStockDto.currency && { currency: updateStockDto.currency }),
-        ...(updateStockDto.purchaseDate && { purchaseDate: new Date(updateStockDto.purchaseDate) }),
-        ...(updateStockDto.broker !== undefined && { broker: updateStockDto.broker }),
-        ...(updateStockDto.notes !== undefined && { notes: updateStockDto.notes }),
+        ...(updateStockDto.purchaseDate && {
+          purchaseDate: new Date(updateStockDto.purchaseDate),
+        }),
+        ...(updateStockDto.broker !== undefined && {
+          broker: updateStockDto.broker,
+        }),
+        ...(updateStockDto.notes !== undefined && {
+          notes: updateStockDto.notes,
+        }),
       },
       include: {
         dividends: true,
@@ -106,14 +116,16 @@ export class StocksService {
     }, 0);
 
     const totalDividends = stocks.reduce((sum, stock) => {
-      return sum + stock.dividends.reduce((dSum, d) => dSum + Number(d.amount), 0);
+      return (
+        sum + stock.dividends.reduce((dSum, d) => dSum + Number(d.amount), 0)
+      );
     }, 0);
 
     return {
       totalStocks: stocks.length,
       totalCost,
       totalDividends,
-      stocks: stocks.map(s => ({
+      stocks: stocks.map((s) => ({
         id: s.id,
         symbol: s.symbol,
         name: s.name,

@@ -44,7 +44,7 @@ export function SymbolSearch({ onSelect, label = "Sembol Ara", placeholder = "AA
       });
       setQuery(result.symbol);
       setShowResults(false);
-    } catch (error) {
+    } catch {
       // If quote fetch fails, just return the symbol info
       onSelect(result);
       setQuery(result.symbol);

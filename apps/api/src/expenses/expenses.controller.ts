@@ -9,10 +9,13 @@ import {
   Query,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto, UpdateExpenseDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Expenses')
+@ApiBearerAuth()
 @Controller('expenses')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
@@ -30,7 +33,12 @@ export class ExpensesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.expensesService.findAll(userId, { category, paymentMethod, startDate, endDate });
+    return this.expensesService.findAll(userId, {
+      category,
+      paymentMethod,
+      startDate,
+      endDate,
+    });
   }
 
   @Get('summary')

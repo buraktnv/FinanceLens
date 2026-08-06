@@ -1,7 +1,10 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { YahooFinanceService } from './yahoo-finance.service';
 import { AuthGuard } from '../auth/auth.guard';
 
+@ApiTags('Yahoo Finance')
+@ApiBearerAuth()
 @Controller('yahoo-finance')
 @UseGuards(AuthGuard)
 export class YahooFinanceController {

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { incomesApi, CreateIncomeInput } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddIncomeFormProps {
   onSuccess?: () => void;
@@ -23,7 +24,7 @@ export function AddIncomeForm({ onSuccess, onCancel }: AddIncomeFormProps) {
     currency: "TRY",
     type: "SALARY",
     description: "",
-    date: new Date().toISOString().split("T")[0],
+    date: new Date().toISOString().slice(0, 10),
     isRecurring: false,
     frequency: "",
     notes: "",
@@ -35,7 +36,11 @@ export function AddIncomeForm({ onSuccess, onCancel }: AddIncomeFormProps) {
       queryClient.invalidateQueries({ queryKey: ["incomes"] });
       queryClient.invalidateQueries({ queryKey: ["incomes", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Income added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

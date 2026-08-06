@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cashApi, Cash } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface EditCashFormProps {
   cash: Cash;
@@ -33,7 +34,11 @@ export function EditCashForm({ cash, onSuccess, onCancel }: EditCashFormProps) {
       queryClient.invalidateQueries({ queryKey: ["cash"] });
       queryClient.invalidateQueries({ queryKey: ["cash", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Cash account updated successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

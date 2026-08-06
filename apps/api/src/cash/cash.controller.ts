@@ -8,16 +8,22 @@ import {
   Delete,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CashService } from './cash.service';
 import { CreateCashDto, UpdateCashDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Cash')
+@ApiBearerAuth()
 @Controller('cash')
 export class CashController {
   constructor(private readonly cashService: CashService) {}
 
   @Post()
-  create(@CurrentUser('id') userId: string, @Body() createCashDto: CreateCashDto) {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() createCashDto: CreateCashDto,
+  ) {
     return this.cashService.create(userId, createCashDto);
   }
 

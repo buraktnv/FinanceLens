@@ -1,3 +1,5 @@
+import { USE_MOCK_DATA, mockDashboardApi, mockStocksApi, mockEurobondsApi, mockEtfsApi, mockIncomesApi, mockExpensesApi, mockCashApi, mockGoldApi, mockSilverApi, mockPreciousMetalsApi, mockYahooFinanceApi } from './api-mock';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface RequestOptions extends RequestInit {
@@ -46,15 +48,14 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   return response.json();
 }
 
-// Dashboard API
-export const dashboardApi = {
+// Real API implementations
+const realDashboardApi = {
   getOverview: () => request<DashboardOverview>('/dashboard/overview'),
   getRecentTransactions: (limit = 10) =>
     request<Transaction[]>('/dashboard/transactions', { params: { limit: String(limit) } }),
 };
 
-// Stocks API
-export const stocksApi = {
+const realStocksApi = {
   getAll: () => request<Stock[]>('/stocks'),
   getOne: (id: string) => request<Stock>(`/stocks/${id}`),
   getSummary: () => request<StockSummary>('/stocks/summary'),
@@ -66,8 +67,7 @@ export const stocksApi = {
     request<void>(`/stocks/${id}`, { method: 'DELETE' }),
 };
 
-// Eurobonds API
-export const eurobondsApi = {
+const realEurobondsApi = {
   getAll: () => request<Eurobond[]>('/eurobonds'),
   getOne: (id: string) => request<Eurobond>(`/eurobonds/${id}`),
   getSummary: () => request<EurobondSummary>('/eurobonds/summary'),
@@ -79,8 +79,7 @@ export const eurobondsApi = {
     request<void>(`/eurobonds/${id}`, { method: 'DELETE' }),
 };
 
-// ETFs API
-export const etfsApi = {
+const realEtfsApi = {
   getAll: () => request<ETF[]>('/etfs'),
   getOne: (id: string) => request<ETF>(`/etfs/${id}`),
   getSummary: () => request<ETFSummary>('/etfs/summary'),
@@ -92,8 +91,7 @@ export const etfsApi = {
     request<void>(`/etfs/${id}`, { method: 'DELETE' }),
 };
 
-// Incomes API
-export const incomesApi = {
+const realIncomesApi = {
   getAll: (filters?: IncomeFilters) => {
     const params: Record<string, string> = {};
     if (filters?.type) params.type = filters.type;
@@ -116,8 +114,7 @@ export const incomesApi = {
     request<void>(`/incomes/${id}`, { method: 'DELETE' }),
 };
 
-// Expenses API
-export const expensesApi = {
+const realExpensesApi = {
   getAll: (filters?: ExpenseFilters) => {
     const params: Record<string, string> = {};
     if (filters?.category) params.category = filters.category;
@@ -140,6 +137,14 @@ export const expensesApi = {
   delete: (id: string) =>
     request<void>(`/expenses/${id}`, { method: 'DELETE' }),
 };
+
+// Export APIs based on USE_MOCK_DATA flag
+export const dashboardApi = USE_MOCK_DATA ? mockDashboardApi : realDashboardApi;
+export const stocksApi = USE_MOCK_DATA ? mockStocksApi : realStocksApi;
+export const eurobondsApi = USE_MOCK_DATA ? mockEurobondsApi : realEurobondsApi;
+export const etfsApi = USE_MOCK_DATA ? mockEtfsApi : realEtfsApi;
+export const incomesApi = USE_MOCK_DATA ? mockIncomesApi : realIncomesApi;
+export const expensesApi = USE_MOCK_DATA ? mockExpensesApi : realExpensesApi;
 
 // Types
 export interface DashboardOverview {
@@ -534,8 +539,8 @@ export interface PreciousMetalPrice {
   usdToTry: number;
 }
 
-// Cash API
-export const cashApi = {
+// Real Cash API
+const realCashApi = {
   getAll: () => request<Cash[]>('/cash'),
   getOne: (id: string) => request<Cash>(`/cash/${id}`),
   getSummary: () => request<CashSummary>('/cash/summary'),
@@ -547,8 +552,8 @@ export const cashApi = {
     request<void>(`/cash/${id}`, { method: 'DELETE' }),
 };
 
-// Gold API
-export const goldApi = {
+// Real Gold API
+const realGoldApi = {
   getAll: () => request<Gold[]>('/gold'),
   getOne: (id: string) => request<Gold>(`/gold/${id}`),
   getSummary: () => request<GoldSummary>('/gold/summary'),
@@ -560,8 +565,8 @@ export const goldApi = {
     request<void>(`/gold/${id}`, { method: 'DELETE' }),
 };
 
-// Silver API
-export const silverApi = {
+// Real Silver API
+const realSilverApi = {
   getAll: () => request<Silver[]>('/silver'),
   getOne: (id: string) => request<Silver>(`/silver/${id}`),
   getSummary: () => request<SilverSummary>('/silver/summary'),
@@ -573,20 +578,20 @@ export const silverApi = {
     request<void>(`/silver/${id}`, { method: 'DELETE' }),
 };
 
-// Precious Metals Price API
-export const preciousMetalsApi = {
+// Real Precious Metals Price API
+const realPreciousMetalsApi = {
   getGoldPrice: () => request<PreciousMetalPrice>('/precious-metals/gold/price'),
   getSilverPrice: () => request<PreciousMetalPrice>('/precious-metals/silver/price'),
 };
 
-// Yahoo Finance API
-export const yahooFinanceApi = {
+// Real Yahoo Finance API
+const realYahooFinanceApi = {
   search: (query: string) =>
     request<YahooSearchResult[]>('/yahoo-finance/search', { params: { q: query } }),
   getQuote: (symbol: string) =>
     request<YahooQuote>(`/yahoo-finance/quote/${symbol}`),
   getHistorical: (symbol: string, period1: number, period2: number, interval = '1d') =>
-    request<any>(`/yahoo-finance/historical/${symbol}`, {
+    request<YahooHistoricalData>(`/yahoo-finance/historical/${symbol}`, {
       params: {
         period1: String(period1),
         period2: String(period2),
@@ -594,6 +599,13 @@ export const yahooFinanceApi = {
       },
     }),
 };
+
+// Export remaining APIs based on USE_MOCK_DATA flag
+export const cashApi = USE_MOCK_DATA ? mockCashApi : realCashApi;
+export const goldApi = USE_MOCK_DATA ? mockGoldApi : realGoldApi;
+export const silverApi = USE_MOCK_DATA ? mockSilverApi : realSilverApi;
+export const preciousMetalsApi = USE_MOCK_DATA ? mockPreciousMetalsApi : realPreciousMetalsApi;
+export const yahooFinanceApi = USE_MOCK_DATA ? mockYahooFinanceApi : realYahooFinanceApi;
 
 export interface YahooQuote {
   symbol: string;
@@ -610,4 +622,12 @@ export interface YahooSearchResult {
   name: string;
   type: string;
   exchange: string;
+}
+
+export interface YahooHistoricalData {
+  symbol: string;
+  timestamp: number[];
+  indicators: {
+    quote: Array<{ close: (number | null)[] }>;
+  };
 }

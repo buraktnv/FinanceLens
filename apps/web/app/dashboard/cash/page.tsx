@@ -30,10 +30,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, Wallet } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2 } from "lucide-react";
 import { cashApi, Cash } from "@/lib/api";
 import { AddCashForm } from "@/components/forms/add-cash-form";
 import { EditCashForm } from "@/components/forms/edit-cash-form";
+import { toast } from "sonner";
 
 export default function CashPage() {
   const queryClient = useQueryClient();
@@ -60,6 +61,7 @@ export default function CashPage() {
       queryClient.invalidateQueries({ queryKey: ["cash"] });
       queryClient.invalidateQueries({ queryKey: ["cash", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Cash account deleted successfully");
       setDeletingCash(null);
     },
   });
@@ -70,9 +72,9 @@ export default function CashPage() {
       (cash.bankName && cash.bankName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const formatCurrency = (value: number, currency = "TRY") => {
-    const symbol = currency === "TRY" ? "₺" : currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency;
-    return `${symbol}${value.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (value: number, currency = "USD") => {
+    const symbol = currency === "USD" ? "$" : currency === "TRY" ? "₺" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency;
+    return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const handleDelete = () => {
@@ -91,8 +93,8 @@ export default function CashPage() {
 
   if (cashError) {
     return (
-      <div className="text-center text-red-600">
-        Hata: {cashError instanceof Error ? cashError.message : "Bilinmeyen hata"}
+      <div className="text-center text-red-600 py-8">
+        Error: {cashError instanceof Error ? cashError.message : "Unknown error"}
       </div>
     );
   }
@@ -104,38 +106,38 @@ export default function CashPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Nakit Hesaplari</h1>
-          <p className="text-muted-foreground">Tum nakit hesaplariniz</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Cash Accounts</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">All your cash accounts</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+        <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Yeni Hesap Ekle
+          Add New Account
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Hesap</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Accounts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalAccounts}</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalAccounts}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Bakiye (TRY)</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance (USD)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{totalBalance.toLocaleString("tr-TR")}</div>
+            <div className="text-xl sm:text-2xl font-bold">${totalBalance.toLocaleString("en-US")}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Para Birimleri</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Currencies</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1 text-sm">
@@ -152,11 +154,11 @@ export default function CashPage() {
 
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Hesap ara..."
-            className="pl-10"
+            placeholder="Search accounts..."
+            className="pl-10 text-sm sm:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -166,24 +168,24 @@ export default function CashPage() {
       {/* Cash Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Nakit Hesaplari</CardTitle>
-          <CardDescription>Tum nakit hesaplariniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Cash Accounts</CardTitle>
+          <CardDescription className="text-sm">All your cash accounts</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {filteredCash.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Henuz nakit hesabi eklenmemis.
+            <div className="text-center py-8 text-sm sm:text-base text-muted-foreground">
+              No cash accounts added yet.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Hesap Adi</TableHead>
-                  <TableHead>Banka</TableHead>
-                  <TableHead className="text-right">Bakiye</TableHead>
-                  <TableHead>Para Birimi</TableHead>
-                  <TableHead>Hesap Turu</TableHead>
-                  <TableHead className="text-right">Islemler</TableHead>
+                  <TableHead className="text-sm">Account Name</TableHead>
+                  <TableHead className="text-sm">Bank</TableHead>
+                  <TableHead className="text-right text-sm">Balance</TableHead>
+                  <TableHead className="text-sm">Currency</TableHead>
+                  <TableHead className="text-sm">Account Type</TableHead>
+                  <TableHead className="text-right text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -193,14 +195,15 @@ export default function CashPage() {
                     <TableCell>{cash.bankName || "-"}</TableCell>
                     <TableCell className="text-right">{formatCurrency(cash.balance, cash.currency)}</TableCell>
                     <TableCell>{cash.currency}</TableCell>
-                    <TableCell>{cash.accountType || "-"}</TableCell>
+                    <TableCell className="text-sm">{cash.accountType || "-"}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1 sm:gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setEditingCash(cash)}
-                          title="Duzenle"
+                          title="Edit"
+                          className="h-8 w-8"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -208,8 +211,8 @@ export default function CashPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => setDeletingCash(cash)}
-                          title="Sil"
-                          className="text-red-600 hover:text-red-700"
+                          title="Delete"
+                          className="text-red-600 hover:text-red-700 h-8 w-8"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -227,9 +230,9 @@ export default function CashPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni Nakit Hesabi Ekle</DialogTitle>
+            <DialogTitle>Add New Cash Account</DialogTitle>
             <DialogDescription>
-              Nakit hesap bilgilerini girin
+              Enter your cash account details
             </DialogDescription>
           </DialogHeader>
           <AddCashForm
@@ -243,9 +246,9 @@ export default function CashPage() {
       <Dialog open={!!editingCash} onOpenChange={(open) => !open && setEditingCash(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nakit Hesabi Duzenle</DialogTitle>
+            <DialogTitle>Edit Cash Account</DialogTitle>
             <DialogDescription>
-              Nakit hesap bilgilerini guncelleyin
+              Update your cash account details
             </DialogDescription>
           </DialogHeader>
           {editingCash && (
@@ -262,20 +265,20 @@ export default function CashPage() {
       <AlertDialog open={!!deletingCash} onOpenChange={(open) => !open && setDeletingCash(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hesabi Sil?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Account?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu islemi geri alamazsiniz. Hesap kalici olarak silinecektir.
+              This action cannot be undone. The account will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Iptal</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sil
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

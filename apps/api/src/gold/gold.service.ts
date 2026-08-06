@@ -49,12 +49,24 @@ export class GoldService {
       where: { id },
       data: {
         ...(updateGoldDto.name && { name: updateGoldDto.name }),
-        ...(updateGoldDto.quantity !== undefined && { quantity: new Prisma.Decimal(updateGoldDto.quantity) }),
-        ...(updateGoldDto.purchasePrice !== undefined && { purchasePrice: new Prisma.Decimal(updateGoldDto.purchasePrice) }),
-        ...(updateGoldDto.purchaseDate && { purchaseDate: new Date(updateGoldDto.purchaseDate) }),
-        ...(updateGoldDto.purity !== undefined && { purity: updateGoldDto.purity }),
-        ...(updateGoldDto.location !== undefined && { location: updateGoldDto.location }),
-        ...(updateGoldDto.notes !== undefined && { notes: updateGoldDto.notes }),
+        ...(updateGoldDto.quantity !== undefined && {
+          quantity: new Prisma.Decimal(updateGoldDto.quantity),
+        }),
+        ...(updateGoldDto.purchasePrice !== undefined && {
+          purchasePrice: new Prisma.Decimal(updateGoldDto.purchasePrice),
+        }),
+        ...(updateGoldDto.purchaseDate && {
+          purchaseDate: new Date(updateGoldDto.purchaseDate),
+        }),
+        ...(updateGoldDto.purity !== undefined && {
+          purity: updateGoldDto.purity,
+        }),
+        ...(updateGoldDto.location !== undefined && {
+          location: updateGoldDto.location,
+        }),
+        ...(updateGoldDto.notes !== undefined && {
+          notes: updateGoldDto.notes,
+        }),
       },
     });
   }
@@ -92,7 +104,7 @@ export class GoldService {
       totalHoldings: holdings.length,
       totalQuantity,
       totalCost,
-      holdings: holdings.map(h => ({
+      holdings: holdings.map((h) => ({
         id: h.id,
         name: h.name,
         quantity: Number(h.quantity),

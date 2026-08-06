@@ -27,7 +27,10 @@ export class IncomesService {
     });
   }
 
-  async findAll(userId: string, filters?: { type?: string; startDate?: string; endDate?: string }) {
+  async findAll(
+    userId: string,
+    filters?: { type?: string; startDate?: string; endDate?: string },
+  ) {
     const where: any = { userId };
 
     if (filters?.type) {
@@ -54,13 +57,17 @@ export class IncomesService {
   }
 
   async update(userId: string, id: string, dto: UpdateIncomeDto) {
-    const income = await this.prisma.income.findFirst({ where: { id, userId } });
+    const income = await this.prisma.income.findFirst({
+      where: { id, userId },
+    });
     if (!income) return null;
 
     return this.prisma.income.update({
       where: { id },
       data: {
-        ...(dto.amount !== undefined && { amount: new Prisma.Decimal(dto.amount) }),
+        ...(dto.amount !== undefined && {
+          amount: new Prisma.Decimal(dto.amount),
+        }),
         ...(dto.currency && { currency: dto.currency }),
         ...(dto.type && { type: dto.type }),
         ...(dto.description !== undefined && { description: dto.description }),
@@ -75,7 +82,9 @@ export class IncomesService {
   }
 
   async remove(userId: string, id: string) {
-    const income = await this.prisma.income.findFirst({ where: { id, userId } });
+    const income = await this.prisma.income.findFirst({
+      where: { id, userId },
+    });
     if (!income) return null;
     return this.prisma.income.delete({ where: { id } });
   }
@@ -96,12 +105,17 @@ export class IncomesService {
     });
 
     const total = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
-    const recurring = incomes.filter(i => i.isRecurring).reduce((sum, i) => sum + Number(i.amount), 0);
+    const recurring = incomes
+      .filter((i) => i.isRecurring)
+      .reduce((sum, i) => sum + Number(i.amount), 0);
 
-    const byType = incomes.reduce((acc, i) => {
-      acc[i.type] = (acc[i.type] || 0) + Number(i.amount);
-      return acc;
-    }, {} as Record<string, number>);
+    const byType = incomes.reduce(
+      (acc, i) => {
+        acc[i.type] = (acc[i.type] || 0) + Number(i.amount);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       month: targetMonth + 1,

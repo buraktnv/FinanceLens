@@ -11,6 +11,8 @@ import {
   ArrowRight,
   BarChart3,
   Shield,
+  Coins,
+  Landmark,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
@@ -26,10 +28,10 @@ export default function LandingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <Wallet className="h-16 w-16 text-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Yukleniyor...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -41,7 +43,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -51,10 +53,10 @@ export default function LandingPage() {
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost">Giris Yap</Button>
+              <Button variant="ghost">Sign In</Button>
             </Link>
             <Link href="/register">
-              <Button>Kayit Ol</Button>
+              <Button>Sign Up</Button>
             </Link>
           </nav>
         </div>
@@ -63,49 +65,49 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
         <h1 className="text-5xl font-bold tracking-tight mb-6">
-          Finansal Durumunuzu
-          <span className="text-primary"> Tek Bakista</span> Gorun
+          Your Finances
+          <span className="text-primary"> at a Glance</span>
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-          Yatirimlarinizi, gelirlerinizi ve giderlerinizi tek bir platformda
-          takip edin. Birikimlerinizin ne kadar surecegini hesaplayin.
+          Track your investments, income, and expenses all in one place.
+          See how long your savings will last.
         </p>
         <div className="flex gap-4 justify-center">
           <Link href="/register">
             <Button size="lg" className="gap-2">
-              Ucretsiz Baslayin
+              Get Started Free
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
           <Link href="/login">
             <Button size="lg" variant="outline">
-              Giris Yap
+              Sign In
             </Button>
           </Link>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="bg-gray-50 py-20">
+      <section className="bg-muted py-20">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Neler Yapabilirsiniz?
+            Everything You Need
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <FeatureCard
               icon={<TrendingUp className="h-10 w-10 text-primary" />}
-              title="Yatirim Takibi"
-              description="Hisse senetleri, ETF'ler ve Eurobond'larinizi takip edin. Kar/zarar durumunuzu anlik gorun."
+              title="Investment Tracking"
+              description="Track stocks, ETFs, and eurobonds. Monitor your profit and loss in real time with live price data."
             />
             <FeatureCard
               icon={<PieChart className="h-10 w-10 text-primary" />}
-              title="Harcama Analizi"
-              description="Paranizin nereye gittigini gorun. Kategorilere gore harcamalarinizi analiz edin."
+              title="Spending Analysis"
+              description="See exactly where your money goes. Analyze your spending across categories with visual breakdowns."
             />
             <FeatureCard
               icon={<BarChart3 className="h-10 w-10 text-primary" />}
-              title="Tasarruf Hesaplama"
-              description="Birikimleriniz ne kadar sure yeter? Aylik tasarruf hedefinizi belirleyin."
+              title="Savings Calculator"
+              description="How long will your savings last? Set monthly savings goals and project your runway."
             />
           </div>
         </div>
@@ -115,25 +117,41 @@ export default function LandingPage() {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Desteklenen Yatirim Turleri
+            Supported Asset Types
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <InvestmentCard title="Hisse Senetleri" description="BIST & Global" />
-            <InvestmentCard title="ETF'ler" description="Temettu takibi" />
-            <InvestmentCard title="Eurobond" description="Kupon odemeler" />
-            <InvestmentCard title="Gayrimenkul" description="Kira geliri" />
+            <InvestmentCard
+              icon={<TrendingUp className="h-8 w-8 text-primary" />}
+              title="Stocks"
+              description="Global markets with live prices"
+            />
+            <InvestmentCard
+              icon={<BarChart3 className="h-8 w-8 text-primary" />}
+              title="ETFs"
+              description="Distribution & dividend tracking"
+            />
+            <InvestmentCard
+              icon={<Landmark className="h-8 w-8 text-primary" />}
+              title="Eurobonds"
+              description="Coupon payment tracking"
+            />
+            <InvestmentCard
+              icon={<Coins className="h-8 w-8 text-primary" />}
+              title="Gold & Silver"
+              description="Precious metals with live rates"
+            />
           </div>
         </div>
       </section>
 
       {/* Tax Section */}
-      <section className="bg-gray-50 py-20">
+      <section className="bg-muted py-20">
         <div className="container mx-auto px-4 text-center">
           <Shield className="h-16 w-16 text-primary mx-auto mb-6" />
-          <h2 className="text-3xl font-bold mb-4">Turkiye'ye Ozel Vergi Hesaplama</h2>
+          <h2 className="text-3xl font-bold mb-4">Complete Financial Picture</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Eurobond, ETF ve hisse senedi vergilerinizi otomatik hesaplayin.
-            Stopaj oranlarini takip edin.
+            From cash accounts to precious metals, every asset in one dashboard.
+            Track loans, monitor net worth, and plan your financial future.
           </p>
         </div>
       </section>
@@ -141,13 +159,13 @@ export default function LandingPage() {
       {/* CTA Section */}
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Hemen Baslayin</h2>
+          <h2 className="text-3xl font-bold mb-4">Start Tracking Today</h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Finansal ozgurlugunuze giden yolda ilk adimi atin
+            Take control of your financial future
           </p>
           <Link href="/register">
             <Button size="lg" className="gap-2">
-              Ucretsiz Kayit Ol
+              Create Free Account
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -157,7 +175,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; 2024 FinanceLens. Tum haklari saklidir.</p>
+          <p>&copy; 2024 FinanceLens. All rights reserved.</p>
         </div>
       </footer>
     </div>
@@ -174,7 +192,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="bg-white p-6 rounded-lg border shadow-sm">
+    <div className="bg-card p-6 rounded-lg border shadow-sm">
       <div className="mb-4">{icon}</div>
       <h3 className="text-xl font-semibold mb-2">{title}</h3>
       <p className="text-muted-foreground">{description}</p>
@@ -183,14 +201,17 @@ function FeatureCard({
 }
 
 function InvestmentCard({
+  icon,
   title,
   description,
 }: {
+  icon: React.ReactNode;
   title: string;
   description: string;
 }) {
   return (
-    <div className="bg-white p-6 rounded-lg border text-center hover:shadow-md transition-shadow">
+    <div className="bg-card p-6 rounded-lg border text-center hover:shadow-md transition-shadow">
+      <div className="flex justify-center mb-3">{icon}</div>
       <h3 className="text-lg font-semibold mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>

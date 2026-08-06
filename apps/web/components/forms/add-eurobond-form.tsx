@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { eurobondsApi, CreateEurobondInput } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddEurobondFormProps {
   onSuccess?: () => void;
@@ -25,7 +26,7 @@ export function AddEurobondForm({ onSuccess, onCancel }: AddEurobondFormProps) {
     quantity: 1,
     couponRate: 0,
     currency: "USD",
-    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseDate: new Date().toISOString().slice(0, 10),
     maturityDate: "",
     couponFrequency: 2,
     broker: "",
@@ -38,7 +39,11 @@ export function AddEurobondForm({ onSuccess, onCancel }: AddEurobondFormProps) {
       queryClient.invalidateQueries({ queryKey: ["eurobonds"] });
       queryClient.invalidateQueries({ queryKey: ["eurobonds", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Eurobond added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to add eurobond");
     },
   });
 

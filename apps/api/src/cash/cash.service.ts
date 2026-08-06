@@ -47,12 +47,22 @@ export class CashService {
     return this.prisma.cash.update({
       where: { id },
       data: {
-        ...(updateCashDto.accountName && { accountName: updateCashDto.accountName }),
-        ...(updateCashDto.balance !== undefined && { balance: new Prisma.Decimal(updateCashDto.balance) }),
+        ...(updateCashDto.accountName && {
+          accountName: updateCashDto.accountName,
+        }),
+        ...(updateCashDto.balance !== undefined && {
+          balance: new Prisma.Decimal(updateCashDto.balance),
+        }),
         ...(updateCashDto.currency && { currency: updateCashDto.currency }),
-        ...(updateCashDto.accountType !== undefined && { accountType: updateCashDto.accountType }),
-        ...(updateCashDto.bankName !== undefined && { bankName: updateCashDto.bankName }),
-        ...(updateCashDto.notes !== undefined && { notes: updateCashDto.notes }),
+        ...(updateCashDto.accountType !== undefined && {
+          accountType: updateCashDto.accountType,
+        }),
+        ...(updateCashDto.bankName !== undefined && {
+          bankName: updateCashDto.bankName,
+        }),
+        ...(updateCashDto.notes !== undefined && {
+          notes: updateCashDto.notes,
+        }),
       },
     });
   }
@@ -82,7 +92,7 @@ export class CashService {
     const byCurrency: Record<string, number> = {};
     let totalBalance = 0;
 
-    cashAccounts.forEach(account => {
+    cashAccounts.forEach((account) => {
       const balance = Number(account.balance);
       const currency = account.currency;
 
@@ -99,7 +109,7 @@ export class CashService {
       totalAccounts: cashAccounts.length,
       totalBalance,
       byCurrency,
-      accounts: cashAccounts.map(a => ({
+      accounts: cashAccounts.map((a) => ({
         id: a.id,
         accountName: a.accountName,
         balance: Number(a.balance),

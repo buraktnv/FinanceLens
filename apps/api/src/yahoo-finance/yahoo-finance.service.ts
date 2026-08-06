@@ -79,10 +79,7 @@ export class YahooFinanceService {
       const data = await response.json();
 
       if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
-        throw new HttpException(
-          'Symbol not found',
-          HttpStatus.NOT_FOUND,
-        );
+        throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);
       }
 
       const result = data.chart.result[0];
@@ -94,7 +91,10 @@ export class YahooFinanceService {
         name: meta.longName || meta.symbol,
         regularMarketPrice: meta.regularMarketPrice,
         regularMarketChange: meta.regularMarketPrice - meta.previousClose,
-        regularMarketChangePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
+        regularMarketChangePercent:
+          ((meta.regularMarketPrice - meta.previousClose) /
+            meta.previousClose) *
+          100,
         currency: meta.currency,
         marketState: meta.marketState,
       };
@@ -133,10 +133,7 @@ export class YahooFinanceService {
       const data = await response.json();
 
       if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
-        throw new HttpException(
-          'Symbol not found',
-          HttpStatus.NOT_FOUND,
-        );
+        throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);
       }
 
       return data.chart.result[0];

@@ -27,12 +27,12 @@ export default function RegisterPage() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("Sifreler eslesmedi");
+      setError("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      setError("Sifre en az 6 karakter olmalidir");
+      setError("Password must be at least 6 characters");
       return;
     }
 
@@ -47,14 +47,14 @@ export default function RegisterPage() {
         router.refresh();
       }
     } catch {
-      setError("Beklenmeyen bir hata olustu. Lutfen tekrar deneyin.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -67,9 +67,9 @@ export default function RegisterPage() {
         {/* Register Card */}
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Kayit Ol</CardTitle>
+            <CardTitle className="text-2xl">Sign Up</CardTitle>
             <CardDescription>
-              Ucretsiz hesap olusturun
+              Create a free account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -80,11 +80,11 @@ export default function RegisterPage() {
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="name">Ad Soyad</Label>
+                <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
                   type="text"
-                  placeholder="Adiniz Soyadiniz"
+                  placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -92,11 +92,11 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">E-posta</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ornek@email.com"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -104,7 +104,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Sifre</Label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
@@ -116,7 +116,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Sifre Tekrar</Label>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -131,19 +131,19 @@ export default function RegisterPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Kayit olunuyor...
+                    Creating account...
                   </>
                 ) : (
-                  "Kayit Ol"
+                  "Sign Up"
                 )}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <div className="text-sm text-center text-muted-foreground">
-              Zaten hesabiniz var mi?{" "}
+              Already have an account?{" "}
               <Link href="/login" className="text-primary hover:underline">
-                Giris Yap
+                Sign In
               </Link>
             </div>
           </CardFooter>
@@ -152,7 +152,7 @@ export default function RegisterPage() {
         {/* Back to home */}
         <div className="text-center mt-6">
           <Link href="/" className="text-sm text-muted-foreground hover:text-primary">
-            ← Ana Sayfaya Don
+            ← Back to Home
           </Link>
         </div>
       </div>

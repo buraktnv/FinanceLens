@@ -28,7 +28,15 @@ export class ExpensesService {
     });
   }
 
-  async findAll(userId: string, filters?: { category?: string; startDate?: string; endDate?: string; paymentMethod?: string }) {
+  async findAll(
+    userId: string,
+    filters?: {
+      category?: string;
+      startDate?: string;
+      endDate?: string;
+      paymentMethod?: string;
+    },
+  ) {
     const where: any = { userId };
 
     if (filters?.category) where.category = filters.category;
@@ -54,20 +62,26 @@ export class ExpensesService {
   }
 
   async update(userId: string, id: string, dto: UpdateExpenseDto) {
-    const expense = await this.prisma.expense.findFirst({ where: { id, userId } });
+    const expense = await this.prisma.expense.findFirst({
+      where: { id, userId },
+    });
     if (!expense) return null;
 
     return this.prisma.expense.update({
       where: { id },
       data: {
-        ...(dto.amount !== undefined && { amount: new Prisma.Decimal(dto.amount) }),
+        ...(dto.amount !== undefined && {
+          amount: new Prisma.Decimal(dto.amount),
+        }),
         ...(dto.currency && { currency: dto.currency }),
         ...(dto.category && { category: dto.category }),
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.date && { date: new Date(dto.date) }),
         ...(dto.isRecurring !== undefined && { isRecurring: dto.isRecurring }),
         ...(dto.frequency !== undefined && { frequency: dto.frequency }),
-        ...(dto.paymentMethod !== undefined && { paymentMethod: dto.paymentMethod }),
+        ...(dto.paymentMethod !== undefined && {
+          paymentMethod: dto.paymentMethod,
+        }),
         ...(dto.propertyId !== undefined && { propertyId: dto.propertyId }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
@@ -76,7 +90,9 @@ export class ExpensesService {
   }
 
   async remove(userId: string, id: string) {
-    const expense = await this.prisma.expense.findFirst({ where: { id, userId } });
+    const expense = await this.prisma.expense.findFirst({
+      where: { id, userId },
+    });
     if (!expense) return null;
     return this.prisma.expense.delete({ where: { id } });
   }
@@ -97,19 +113,27 @@ export class ExpensesService {
     });
 
     const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    const recurring = expenses.filter(e => e.isRecurring).reduce((sum, e) => sum + Number(e.amount), 0);
+    const recurring = expenses
+      .filter((e) => e.isRecurring)
+      .reduce((sum, e) => sum + Number(e.amount), 0);
 
-    const byCategory = expenses.reduce((acc, e) => {
-      acc[e.category] = (acc[e.category] || 0) + Number(e.amount);
-      return acc;
-    }, {} as Record<string, number>);
+    const byCategory = expenses.reduce(
+      (acc, e) => {
+        acc[e.category] = (acc[e.category] || 0) + Number(e.amount);
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
-    const byPaymentMethod = expenses.reduce((acc, e) => {
-      if (e.paymentMethod) {
-        acc[e.paymentMethod] = (acc[e.paymentMethod] || 0) + Number(e.amount);
-      }
-      return acc;
-    }, {} as Record<string, number>);
+    const byPaymentMethod = expenses.reduce(
+      (acc, e) => {
+        if (e.paymentMethod) {
+          acc[e.paymentMethod] = (acc[e.paymentMethod] || 0) + Number(e.amount);
+        }
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       month: targetMonth + 1,

@@ -34,6 +34,7 @@ import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, TrendingDown } from 
 import { silverApi, preciousMetalsApi, Silver } from "@/lib/api";
 import { AddSilverForm } from "@/components/forms/add-silver-form";
 import { EditSilverForm } from "@/components/forms/edit-silver-form";
+import { toast } from "sonner";
 
 export default function SilverPage() {
   const queryClient = useQueryClient();
@@ -62,6 +63,7 @@ export default function SilverPage() {
       queryClient.invalidateQueries({ queryKey: ["silver"] });
       queryClient.invalidateQueries({ queryKey: ["silver", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Silver holding deleted successfully");
       setDeletingSilver(null);
     },
   });
@@ -73,8 +75,8 @@ export default function SilverPage() {
         const priceData = await preciousMetalsApi.getSilverPrice();
         setCurrentPrice(priceData.pricePerGram);
         setLastUpdated(new Date());
-      } catch (error) {
-        console.error("Failed to fetch silver price:", error);
+      } catch {
+        // Price fetch failed — keep last known price
       }
     };
 
@@ -89,7 +91,7 @@ export default function SilverPage() {
   );
 
   const formatCurrency = (value: number, decimals = 2) => {
-    return `₺${value.toLocaleString("tr-TR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+    return `$${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
   };
 
   const handleDelete = () => {
@@ -108,8 +110,8 @@ export default function SilverPage() {
 
   if (holdingsError) {
     return (
-      <div className="text-center text-red-600">
-        Hata: {holdingsError instanceof Error ? holdingsError.message : "Bilinmeyen hata"}
+      <div className="text-center text-red-600 py-8">
+        Error: {holdingsError instanceof Error ? holdingsError.message : "Unknown error"}
       </div>
     );
   }
@@ -123,47 +125,47 @@ export default function SilverPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gumus Portfoyu</h1>
-          <p className="text-muted-foreground">Tum gumus varliklariniz</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Silver Portfolio</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">All your silver assets</p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
+        <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Yeni Gumus Ekle
+          Add New Silver
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Gram</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Grams</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalQuantity.toFixed(3)} g</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalQuantity.toFixed(3)} g</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Maliyet</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalCost)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost)}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Guncel Deger</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(currentValue)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentValue)}</div>
             {currentPrice && (
               <p className="text-xs text-muted-foreground mt-1">
-                ₺{currentPrice.toFixed(3)}/gram
+                ${currentPrice.toFixed(3)}/gram
                 {lastUpdated && (
                   <span className="ml-2">
-                    (Guncelleme: {lastUpdated.toLocaleTimeString("tr-TR")})
+                    (Updated: {lastUpdated.toLocaleTimeString("en-US")})
                   </span>
                 )}
               </p>
@@ -172,10 +174,10 @@ export default function SilverPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Kar/Zarar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Profit/Loss</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold flex items-center ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-xl sm:text-2xl font-bold flex items-center ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitLoss >= 0 ? <TrendingUp className="mr-1 h-5 w-5" /> : <TrendingDown className="mr-1 h-5 w-5" />}
               {formatCurrency(Math.abs(profitLoss))}
             </div>
@@ -188,11 +190,11 @@ export default function SilverPage() {
 
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Gumus ara..."
-            className="pl-10"
+            placeholder="Search silver..."
+            className="pl-10 text-sm sm:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -202,26 +204,26 @@ export default function SilverPage() {
       {/* Silver Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Gumus Portfoyu</CardTitle>
-          <CardDescription>Tum gumus varliklariniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Silver Portfolio</CardTitle>
+          <CardDescription className="text-sm">All your silver assets</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {filteredHoldings.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Henuz gumus eklenmemis.
+            <div className="text-center py-8 text-sm sm:text-base text-muted-foreground">
+              No silver added yet.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Gumus Adi</TableHead>
-                  <TableHead className="text-right">Gram</TableHead>
-                  <TableHead className="text-right">Alis Fiyati</TableHead>
-                  <TableHead className="text-right">Guncel Fiyat</TableHead>
-                  <TableHead className="text-right">Guncel Deger</TableHead>
-                  <TableHead className="text-right">Kar/Zarar</TableHead>
-                  <TableHead>Ayar</TableHead>
-                  <TableHead className="text-right">Islemler</TableHead>
+                  <TableHead className="text-sm">Silver Name</TableHead>
+                  <TableHead className="text-right text-sm">Grams</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Price</TableHead>
+                  <TableHead className="text-right text-sm">Current Price</TableHead>
+                  <TableHead className="text-right text-sm">Current Value</TableHead>
+                  <TableHead className="text-right text-sm">Profit/Loss</TableHead>
+                  <TableHead className="text-sm">Purity</TableHead>
+                  <TableHead className="text-right text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,14 +253,15 @@ export default function SilverPage() {
                           "-"
                         )}
                       </TableCell>
-                      <TableCell>{silver.purity || "-"}</TableCell>
+                      <TableCell className="text-sm">{silver.purity || "-"}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setEditingSilver(silver)}
-                            title="Duzenle"
+                            title="Edit"
+                            className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -266,8 +269,8 @@ export default function SilverPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeletingSilver(silver)}
-                            title="Sil"
-                            className="text-red-600 hover:text-red-700"
+                            title="Delete"
+                            className="text-red-600 hover:text-red-700 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -286,9 +289,9 @@ export default function SilverPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni Gumus Ekle</DialogTitle>
+            <DialogTitle>Add New Silver</DialogTitle>
             <DialogDescription>
-              Gumus varligi bilgilerini girin
+              Enter your silver asset details
             </DialogDescription>
           </DialogHeader>
           <AddSilverForm
@@ -302,9 +305,9 @@ export default function SilverPage() {
       <Dialog open={!!editingSilver} onOpenChange={(open) => !open && setEditingSilver(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Gumus Duzenle</DialogTitle>
+            <DialogTitle>Edit Silver</DialogTitle>
             <DialogDescription>
-              Gumus varligi bilgilerini guncelleyin
+              Update your silver asset details
             </DialogDescription>
           </DialogHeader>
           {editingSilver && (
@@ -321,20 +324,20 @@ export default function SilverPage() {
       <AlertDialog open={!!deletingSilver} onOpenChange={(open) => !open && setDeletingSilver(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Gumusu Sil?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Silver?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu islemi geri alamazsiniz. Gumus kalici olarak silinecektir.
+              This action cannot be undone. The silver asset will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Iptal</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sil
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

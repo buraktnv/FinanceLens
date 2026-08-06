@@ -1,11 +1,4 @@
+import { PartialType } from '@nestjs/swagger';
 import { CreateGoldDto } from './create-gold.dto';
 
-export class UpdateGoldDto implements Partial<CreateGoldDto> {
-  name?: string;
-  quantity?: number;
-  purchasePrice?: number;
-  purchaseDate?: string;
-  purity?: string;
-  location?: string;
-  notes?: string;
-}
+export class UpdateGoldDto extends PartialType(CreateGoldDto) {}

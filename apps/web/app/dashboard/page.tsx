@@ -41,17 +41,17 @@ export default function DashboardPage() {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">
-          {overviewError instanceof Error ? overviewError.message : "Veri yuklenirken hata olustu"}
+          {overviewError instanceof Error ? overviewError.message : "Error loading data"}
         </p>
         <Button onClick={() => window.location.reload()} className="mt-4">
-          Tekrar Dene
+          Try Again
         </Button>
       </div>
     );
   }
 
-  const formatCurrency = (value: number, currency = "TRY") => {
-    return new Intl.NumberFormat("tr-TR", {
+  const formatCurrency = (value: number, currency = "USD") => {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
@@ -69,38 +69,38 @@ export default function DashboardPage() {
   const monthsOfSavings = monthlyExpenses > 0 ? Math.floor(totalAssets / monthlyExpenses) : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold">Genel Bakis</h1>
-        <p className="text-muted-foreground">Finansal durumunuzun ozeti</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Overview</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Your financial summary</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Toplam Varlik"
+          title="Total Assets"
           value={formatCurrency(totalAssets)}
           change=""
           trend="up"
           icon={<Wallet className="h-4 w-4" />}
         />
         <StatCard
-          title="Aylik Gelir"
+          title="Monthly Income"
           value={formatCurrency(monthlyIncome)}
           change=""
           trend="up"
           icon={<ArrowDownRight className="h-4 w-4" />}
         />
         <StatCard
-          title="Aylik Gider"
+          title="Monthly Expenses"
           value={formatCurrency(monthlyExpenses)}
           change=""
           trend="down"
           icon={<ArrowUpRight className="h-4 w-4" />}
         />
         <StatCard
-          title="Aylik Tasarruf"
+          title="Monthly Savings"
           value={formatCurrency(monthlySavings)}
           change=""
           trend={monthlySavings >= 0 ? "up" : "down"}
@@ -109,25 +109,25 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
         <QuickActionCard
-          title="Nakit Ekle"
-          description="Yeni nakit hesabi ekleyin"
+          title="Add Cash"
+          description="Add new cash account"
           href="/dashboard/cash"
         />
         <QuickActionCard
-          title="Altin Ekle"
-          description="Yeni altin ekleyin"
+          title="Add Gold"
+          description="Add gold holdings"
           href="/dashboard/gold"
         />
         <QuickActionCard
-          title="Gumus Ekle"
-          description="Yeni gumus ekleyin"
+          title="Add Silver"
+          description="Add silver holdings"
           href="/dashboard/silver"
         />
         <QuickActionCard
-          title="Hisse Ekle"
-          description="Yeni hisse senedi ekleyin"
+          title="Add Stock"
+          description="Add stock position"
           href="/dashboard/stocks"
         />
       </div>
@@ -136,45 +136,45 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Yatirim Dagilimi</CardTitle>
-            <CardDescription>Varliklarinizin kategorilere gore dagilimi</CardDescription>
+            <CardTitle className="text-lg md:text-xl">Asset Allocation</CardTitle>
+            <CardDescription className="text-sm">Distribution of your assets by category</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {overview?.breakdown && (
                 <>
                   <PortfolioItem
-                    label="Nakit"
+                    label="Cash"
                     value={formatCurrency(overview.breakdown.cash?.value ?? 0)}
                     percentage={totalAssets > 0 ? ((overview.breakdown.cash?.value ?? 0) / totalAssets) * 100 : 0}
                     color="bg-emerald-500"
                   />
                   <PortfolioItem
-                    label="Altin"
+                    label="Gold"
                     value={formatCurrency(overview.breakdown.gold?.value ?? 0)}
                     percentage={totalAssets > 0 ? ((overview.breakdown.gold?.value ?? 0) / totalAssets) * 100 : 0}
                     color="bg-amber-500"
                   />
                   <PortfolioItem
-                    label="Gumus"
+                    label="Silver"
                     value={formatCurrency(overview.breakdown.silver?.value ?? 0)}
                     percentage={totalAssets > 0 ? ((overview.breakdown.silver?.value ?? 0) / totalAssets) * 100 : 0}
                     color="bg-slate-400"
                   />
                   <PortfolioItem
-                    label="Hisse Senetleri"
+                    label="Stocks"
                     value={formatCurrency(overview.breakdown.stocks?.value ?? 0)}
                     percentage={totalAssets > 0 ? ((overview.breakdown.stocks?.value ?? 0) / totalAssets) * 100 : 0}
                     color="bg-blue-500"
                   />
                   <PortfolioItem
-                    label="ETF'ler"
+                    label="ETFs"
                     value={formatCurrency(overview.breakdown.etfs?.value ?? 0)}
                     percentage={totalAssets > 0 ? ((overview.breakdown.etfs?.value ?? 0) / totalAssets) * 100 : 0}
                     color="bg-green-500"
                   />
                   <PortfolioItem
-                    label="Eurobond"
+                    label="Eurobonds"
                     value={formatCurrency(overview.breakdown.eurobonds?.value ?? 0)}
                     percentage={totalAssets > 0 ? ((overview.breakdown.eurobonds?.value ?? 0) / totalAssets) * 100 : 0}
                     color="bg-yellow-500"
@@ -189,7 +189,7 @@ export default function DashboardPage() {
                 (overview.breakdown.etfs?.value ?? 0) === 0 &&
                 (overview.breakdown.eurobonds?.value ?? 0) === 0
               )) && (
-                <p className="text-muted-foreground text-center py-4">Henuz yatirim eklenmedi</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No investments added yet</p>
               )}
             </div>
           </CardContent>
@@ -197,23 +197,23 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Son Islemler</CardTitle>
-            <CardDescription>Son yapilan islemler</CardDescription>
+            <CardTitle className="text-lg md:text-xl">Recent Transactions</CardTitle>
+            <CardDescription className="text-sm">Latest financial transactions</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {transactions.length > 0 ? (
                 transactions.map((tx) => (
                   <TransactionItem
                     key={tx.id}
                     title={tx.description || tx.category}
-                    date={new Date(tx.date).toLocaleDateString("tr-TR")}
+                    date={new Date(tx.date).toLocaleDateString("en-US")}
                     amount={`${tx.type === "income" ? "+" : "-"}${formatCurrency(tx.amount, tx.currency)}`}
                     type={tx.type === "income" ? "income" : "expense"}
                   />
                 ))
               ) : (
-                <p className="text-muted-foreground text-center py-4">Henuz islem yok</p>
+                <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
               )}
             </div>
           </CardContent>
@@ -223,27 +223,27 @@ export default function DashboardPage() {
       {/* Savings Projection */}
       <Card>
         <CardHeader>
-          <CardTitle>Tasarruf Projeksiyonu</CardTitle>
-          <CardDescription>Mevcut tasarruf hizinizla gelecek tahmini</CardDescription>
+          <CardTitle className="text-lg md:text-xl">Savings Projection</CardTitle>
+          <CardDescription className="text-sm">Future estimate based on current savings rate</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-3">
             <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Birikimler Ne Kadar Yeter?</p>
-              <p className="text-3xl font-bold text-primary">{monthsOfSavings} Ay</p>
-              <p className="text-xs text-muted-foreground">Mevcut giderlerinizle</p>
+              <p className="text-xs md:text-sm text-muted-foreground">How Long Will Savings Last?</p>
+              <p className="text-2xl md:text-3xl font-bold text-primary">{monthsOfSavings} Months</p>
+              <p className="text-xs text-muted-foreground">At current expenses</p>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Aylik Tasarruf Orani</p>
-              <p className={`text-3xl font-bold ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                %{typeof savingsRate === "number" ? savingsRate.toFixed(1) : savingsRate}
+              <p className="text-xs md:text-sm text-muted-foreground">Monthly Savings Rate</p>
+              <p className={`text-2xl md:text-3xl font-bold ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {typeof savingsRate === "number" ? savingsRate.toFixed(1) : savingsRate}%
               </p>
-              <p className="text-xs text-muted-foreground">Gelirin %'si</p>
+              <p className="text-xs text-muted-foreground">Of income</p>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-muted-foreground">Toplam Varlik</p>
-              <p className="text-3xl font-bold text-blue-600">{formatCurrency(totalAssets)}</p>
-              <p className="text-xs text-muted-foreground">Net deger</p>
+              <p className="text-xs md:text-sm text-muted-foreground">Total Assets</p>
+              <p className="text-2xl md:text-3xl font-bold text-blue-600">{formatCurrency(totalAssets)}</p>
+              <p className="text-xs text-muted-foreground">Net worth</p>
             </div>
           </div>
         </CardContent>
@@ -267,14 +267,14 @@ function StatCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-lg md:text-2xl font-bold truncate">{value}</div>
         {change && (
           <div className={`flex items-center text-xs ${trend === "up" ? "text-green-600" : "text-red-600"}`}>
             {trend === "up" ? (
@@ -282,7 +282,7 @@ function StatCard({
             ) : (
               <TrendingDown className="h-3 w-3 mr-1" />
             )}
-            {change} gecen aya gore
+            {change} vs last month
           </div>
         )}
       </CardContent>
@@ -301,14 +301,14 @@ function QuickActionCard({
 }) {
   return (
     <Link href={href}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">
-        <CardContent className="flex items-center gap-4 p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Plus className="h-5 w-5 text-primary" />
+      <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+        <CardContent className="flex items-center gap-3 md:gap-4 p-3 md:p-4">
+          <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+            <Plus className="h-4 w-4 md:h-5 md:w-5 text-primary" />
           </div>
-          <div>
-            <p className="font-medium">{title}</p>
-            <p className="text-sm text-muted-foreground">{description}</p>
+          <div className="min-w-0">
+            <p className="text-sm md:text-base font-medium truncate">{title}</p>
+            <p className="text-xs md:text-sm text-muted-foreground truncate">{description}</p>
           </div>
         </CardContent>
       </Card>
@@ -330,8 +330,8 @@ function PortfolioItem({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm">{label}</span>
-        <span className="text-sm font-medium">{value}</span>
+        <span className="text-xs md:text-sm">{label}</span>
+        <span className="text-xs md:text-sm font-medium">{value}</span>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(percentage, 100)}%` }} />
@@ -358,12 +358,12 @@ function TransactionItem({
   };
 
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="font-medium">{title}</p>
-        <p className="text-sm text-muted-foreground">{date}</p>
+    <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm md:text-base font-medium truncate">{title}</p>
+        <p className="text-xs md:text-sm text-muted-foreground">{date}</p>
       </div>
-      <span className={`font-medium ${colors[type]}`}>{amount}</span>
+      <span className={`text-sm md:text-base font-medium ${colors[type]} shrink-0`}>{amount}</span>
     </div>
   );
 }

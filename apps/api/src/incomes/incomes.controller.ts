@@ -9,10 +9,13 @@ import {
   Query,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IncomesService } from './incomes.service';
 import { CreateIncomeDto, UpdateIncomeDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Incomes')
+@ApiBearerAuth()
 @Controller('incomes')
 export class IncomesController {
   constructor(private readonly incomesService: IncomesService) {}

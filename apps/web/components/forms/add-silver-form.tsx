@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { silverApi, CreateSilverInput } from "@/lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AddSilverFormProps {
   onSuccess?: () => void;
@@ -21,7 +22,7 @@ export function AddSilverForm({ onSuccess, onCancel }: AddSilverFormProps) {
     name: "",
     quantity: 0,
     purchasePrice: 0,
-    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseDate: new Date().toISOString().slice(0, 10),
     purity: "",
     location: "",
     notes: "",
@@ -33,7 +34,11 @@ export function AddSilverForm({ onSuccess, onCancel }: AddSilverFormProps) {
       queryClient.invalidateQueries({ queryKey: ["silver"] });
       queryClient.invalidateQueries({ queryKey: ["silver", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Silver holding added successfully");
       onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
     },
   });
 

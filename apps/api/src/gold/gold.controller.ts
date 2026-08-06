@@ -8,16 +8,22 @@ import {
   Delete,
   NotFoundException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GoldService } from './gold.service';
 import { CreateGoldDto, UpdateGoldDto } from './dto';
 import { CurrentUser } from '../auth';
 
+@ApiTags('Gold')
+@ApiBearerAuth()
 @Controller('gold')
 export class GoldController {
   constructor(private readonly goldService: GoldService) {}
 
   @Post()
-  create(@CurrentUser('id') userId: string, @Body() createGoldDto: CreateGoldDto) {
+  create(
+    @CurrentUser('id') userId: string,
+    @Body() createGoldDto: CreateGoldDto,
+  ) {
     return this.goldService.create(userId, createGoldDto);
   }
 

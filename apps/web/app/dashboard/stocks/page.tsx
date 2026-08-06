@@ -30,11 +30,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, BarChart3 } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, BarChart3 } from "lucide-react";
 import { stocksApi, Stock, yahooFinanceApi } from "@/lib/api";
 import { AddStockForm } from "@/components/forms/add-stock-form";
 import { EditStockForm } from "@/components/forms/edit-stock-form";
 import { StockChart } from "@/components/stock-chart";
+import { toast } from "sonner";
 
 export default function StocksPage() {
   const queryClient = useQueryClient();
@@ -63,6 +64,7 @@ export default function StocksPage() {
       queryClient.invalidateQueries({ queryKey: ["stocks"] });
       queryClient.invalidateQueries({ queryKey: ["stocks", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+      toast.success("Stock deleted successfully");
       setDeletingStock(null);
     },
   });
@@ -73,9 +75,9 @@ export default function StocksPage() {
       stock.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatCurrency = (value: number, currency = "TRY", decimals = 2) => {
-    const symbol = currency === "TRY" ? "₺" : currency === "USD" ? "$" : "€";
-    return `${symbol}${value.toLocaleString("tr-TR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+  const formatCurrency = (value: number, currency = "USD", decimals = 2) => {
+    const symbol = currency === "USD" ? "$" : currency === "TRY" ? "₺" : "€";
+    return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
   };
 
   const handleDelete = () => {
@@ -95,8 +97,8 @@ export default function StocksPage() {
           try {
             const quote = await yahooFinanceApi.getQuote(stock.symbol);
             prices[stock.symbol] = quote.regularMarketPrice;
-          } catch (error) {
-            console.error(`Failed to fetch price for ${stock.symbol}:`, error);
+          } catch {
+            // Price unavailable for this symbol — skip silently
           }
         })
       );
@@ -121,10 +123,10 @@ export default function StocksPage() {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">
-          {stocksError instanceof Error ? stocksError.message : "Veri yuklenirken hata olustu"}
+          {stocksError instanceof Error ? stocksError.message : "Error loading data"}
         </p>
         <Button onClick={() => window.location.reload()} className="mt-4">
-          Tekrar Dene
+          Try Again
         </Button>
       </div>
     );
@@ -136,52 +138,52 @@ export default function StocksPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Hisse Senetleri</h1>
-          <p className="text-muted-foreground">Hisse senedi portfoyunuzu yonetin</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Stocks</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your stock portfolio</p>
         </div>
-        <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4" />
-          Yeni Hisse Ekle
+          Add New Stock
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Maliyet</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₺{totalCost.toLocaleString("tr-TR")}</div>
+            <div className="text-xl sm:text-2xl font-bold">${totalCost.toLocaleString("en-US")}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Temettu</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Dividends</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">₺{totalDividends.toLocaleString("tr-TR")}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalDividends.toLocaleString("en-US")}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hisse Sayisi</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Stock Count</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.totalStocks ?? 0}</div>
+            <div className="text-xl sm:text-2xl font-bold">{summary?.totalStocks ?? 0}</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Search */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-full sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Hisse ara..."
-            className="pl-10"
+            placeholder="Search stocks..."
+            className="pl-10 text-sm sm:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -191,23 +193,23 @@ export default function StocksPage() {
       {/* Stocks Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Hisse Portfoyu</CardTitle>
-          <CardDescription>Tum hisse senetleriniz</CardDescription>
+          <CardTitle className="text-lg sm:text-xl">Stock Portfolio</CardTitle>
+          <CardDescription className="text-sm">All your stocks</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {filteredStocks.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sembol</TableHead>
-                  <TableHead>Sirket</TableHead>
-                  <TableHead className="text-right">Adet</TableHead>
-                  <TableHead className="text-right">Alis Fiyati</TableHead>
-                  <TableHead className="text-right">Guncel Fiyat</TableHead>
-                  <TableHead className="text-right">Toplam Deger</TableHead>
-                  <TableHead className="text-right">Kar/Zarar</TableHead>
-                  <TableHead className="text-right">Alis Tarihi</TableHead>
-                  <TableHead className="text-right">Islemler</TableHead>
+                  <TableHead className="text-sm">Symbol</TableHead>
+                  <TableHead className="text-sm">Company</TableHead>
+                  <TableHead className="text-right text-sm">Quantity</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Price</TableHead>
+                  <TableHead className="text-right text-sm">Current Price</TableHead>
+                  <TableHead className="text-right text-sm">Total Value</TableHead>
+                  <TableHead className="text-right text-sm">Profit/Loss</TableHead>
+                  <TableHead className="text-right text-sm">Purchase Date</TableHead>
+                  <TableHead className="text-right text-sm">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -250,16 +252,17 @@ export default function StocksPage() {
                           </div>
                         ) : "-"}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {new Date(stock.purchaseDate).toLocaleDateString("tr-TR")}
+                      <TableCell className="text-right text-sm">
+                        {new Date(stock.purchaseDate).toLocaleDateString("en-US")}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setChartStock(stock)}
-                            title="Grafik"
+                            title="Chart"
+                            className="h-8 w-8"
                           >
                             <BarChart3 className="h-4 w-4" />
                           </Button>
@@ -267,7 +270,8 @@ export default function StocksPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setEditingStock(stock)}
-                            title="Duzenle"
+                            title="Edit"
+                            className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -275,8 +279,8 @@ export default function StocksPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeletingStock(stock)}
-                            title="Sil"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -289,13 +293,13 @@ export default function StocksPage() {
             </Table>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                {searchTerm ? "Aramanizla eslesen hisse bulunamadi" : "Henuz hisse eklenmedi"}
+              <p className="text-sm sm:text-base text-muted-foreground">
+                {searchTerm ? "No stocks found matching your search" : "No stocks added yet"}
               </p>
               {!searchTerm && (
                 <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4" />
-                  Ilk Hissenizi Ekleyin
+                  Add Your First Stock
                 </Button>
               )}
             </div>
@@ -307,9 +311,9 @@ export default function StocksPage() {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Yeni Hisse Ekle</DialogTitle>
+            <DialogTitle>Add New Stock</DialogTitle>
             <DialogDescription>
-              Yahoo Finance'dan sembol arayarak hisse senetlerinizi ekleyin
+              Search for stock symbols from Yahoo Finance to add to your portfolio
             </DialogDescription>
           </DialogHeader>
           <AddStockForm
@@ -323,9 +327,9 @@ export default function StocksPage() {
       <Dialog open={!!editingStock} onOpenChange={(open) => !open && setEditingStock(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Hisse Duzenle</DialogTitle>
+            <DialogTitle>Edit Stock</DialogTitle>
             <DialogDescription>
-              Hisse senedi bilgilerinizi guncelleyin
+              Update your stock information
             </DialogDescription>
           </DialogHeader>
           {editingStock && (
@@ -342,25 +346,25 @@ export default function StocksPage() {
       <AlertDialog open={!!deletingStock} onOpenChange={(open) => !open && setDeletingStock(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hisseyi Sil</AlertDialogTitle>
+            <AlertDialogTitle>Delete Stock</AlertDialogTitle>
             <AlertDialogDescription>
               {deletingStock && (
                 <>
-                  <strong>{deletingStock.symbol} - {deletingStock.name}</strong> hissesini silmek istediginizden emin misiniz?
-                  Bu islem geri alinamaz.
+                  Are you sure you want to delete <strong>{deletingStock.symbol} - {deletingStock.name}</strong>?
+                  This action cannot be undone.
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Iptal</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sil
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -41,19 +41,21 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid token');
     }
 
-    // Ensure user exists in database (create if doesn't exist)
-    await this.prisma.user.upsert({
+    // Ensure user exists in database (create only on first sighting).
+    // Read-on-miss: avoid a DB write on every authenticated request.
+    const existingUser = await this.prisma.user.findUnique({
       where: { id: user.id },
-      update: {
-        email: user.email!,
-        name: user.user_metadata?.name,
-      },
-      create: {
-        id: user.id,
-        email: user.email!,
-        name: user.user_metadata?.name,
-      },
     });
+
+    if (!existingUser) {
+      await this.prisma.user.create({
+        data: {
+          id: user.id,
+          email: user.email!,
+          name: user.user_metadata?.name,
+        },
+      });
+    }
 
     // Attach user to request for use in controllers
     request.user = user;

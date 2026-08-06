@@ -49,12 +49,24 @@ export class SilverService {
       where: { id },
       data: {
         ...(updateSilverDto.name && { name: updateSilverDto.name }),
-        ...(updateSilverDto.quantity !== undefined && { quantity: new Prisma.Decimal(updateSilverDto.quantity) }),
-        ...(updateSilverDto.purchasePrice !== undefined && { purchasePrice: new Prisma.Decimal(updateSilverDto.purchasePrice) }),
-        ...(updateSilverDto.purchaseDate && { purchaseDate: new Date(updateSilverDto.purchaseDate) }),
-        ...(updateSilverDto.purity !== undefined && { purity: updateSilverDto.purity }),
-        ...(updateSilverDto.location !== undefined && { location: updateSilverDto.location }),
-        ...(updateSilverDto.notes !== undefined && { notes: updateSilverDto.notes }),
+        ...(updateSilverDto.quantity !== undefined && {
+          quantity: new Prisma.Decimal(updateSilverDto.quantity),
+        }),
+        ...(updateSilverDto.purchasePrice !== undefined && {
+          purchasePrice: new Prisma.Decimal(updateSilverDto.purchasePrice),
+        }),
+        ...(updateSilverDto.purchaseDate && {
+          purchaseDate: new Date(updateSilverDto.purchaseDate),
+        }),
+        ...(updateSilverDto.purity !== undefined && {
+          purity: updateSilverDto.purity,
+        }),
+        ...(updateSilverDto.location !== undefined && {
+          location: updateSilverDto.location,
+        }),
+        ...(updateSilverDto.notes !== undefined && {
+          notes: updateSilverDto.notes,
+        }),
       },
     });
   }
@@ -92,7 +104,7 @@ export class SilverService {
       totalHoldings: holdings.length,
       totalQuantity,
       totalCost,
-      holdings: holdings.map(h => ({
+      holdings: holdings.map((h) => ({
         id: h.id,
         name: h.name,
         quantity: Number(h.quantity),

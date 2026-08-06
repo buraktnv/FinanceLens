@@ -1,253 +1,163 @@
+<div align="center">
+
 # FinanceLens
 
-Kisisel finans durumu takip uygulamasi - Turkish personal finance tracking application.
+### Personal Finance Tracker — Full-Stack Monorepo
 
-## Project Overview
+[![Next.js](https://img.shields.io/badge/Next.js_16-black?logo=next.js)](https://nextjs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS_11-red?logo=nestjs)](https://nestjs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma_7-2D3748?logo=prisma)](https://www.prisma.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase)](https://supabase.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript_5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React_19-61DAFB?logo=react)](https://react.dev/)
 
-FinanceLens helps you track your personal finances during career transitions or irregular income periods. It answers key questions:
+Track investments, income, and expenses in one dashboard. Stocks, ETFs, eurobonds, gold, silver, and cash — with live price data, profit/loss tracking, and financial projections.
 
-- Birikimlerim ne kadar sure yeter? (How long will my savings last?)
-- Bu ay ne kadar harcadim? (How much did I spend this month?)
-- Paramı nereye yatirmaliyim? (Where should I invest my money?)
-- Ne kadar vergi odemem gerekiyor? (How much tax do I need to pay?)
+</div>
+
+---
+
+## Features
+
+### Portfolio Management
+- **Stocks** — Full CRUD with live price polling (Yahoo Finance), interactive price charts, dividend tracking
+- **ETFs** — Holdings management with expense ratio and distribution tracking
+- **Eurobonds** — Bond portfolio with coupon rate, maturity date, and payment tracking
+- **Gold & Silver** — Precious metals with live price data and profit/loss calculation
+- **Cash Accounts** — Multi-currency bank account tracking
+
+### Financial Tracking
+- **Income** — Salary, freelance, dividends, rental, interest — with recurring income support
+- **Expenses** — Categorized spending with payment method tracking and visual breakdowns
+- **Dashboard** — Net worth overview, asset allocation, savings rate, monthly cash flow
+- **Financial Status** — Complete picture: runway calculation, savings projections
+
+### Platform
+- **Authentication** — Supabase Auth with JWT validation, protected routes, session management
+- **Dark Mode** — Full theme toggle with system preference detection
+- **Responsive** — Mobile-first design with bottom navigation bar
+- **Type-Safe** — End-to-end TypeScript with Prisma type generation
 
 ## Tech Stack
 
-### Monorepo
-- **Turborepo** - Build system for monorepos
-- **pnpm** - Fast, disk space efficient package manager
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, Tailwind CSS v4, ShadcnUI, TanStack Query v5 |
+| Backend | NestJS 11, Prisma 7, PostgreSQL, Swagger/OpenAPI |
+| Auth | Supabase (JWT), cookie-based sessions |
+| Charts | Recharts |
+| Build | Turborepo, pnpm |
 
-### Frontend (`apps/web`)
-- **Next.js 16** - React framework with App Router
-- **Tailwind CSS** - Utility-first CSS framework
-- **ShadcnUI** - Accessible UI components
-- **Lucide Icons** - Beautiful icons
-- **Supabase SSR** - Authentication with cookie-based sessions
-
-### Backend (`apps/api`)
-- **Nest.js** - Progressive Node.js framework
-- **Prisma ORM** - Type-safe database access
-- **Supabase** - Authentication & Database
-- **Redis** - Caching layer (planned)
-
-## Project Structure
+## Architecture
 
 ```
 FinanceLens/
 ├── apps/
-│   ├── web/                 # Next.js frontend
-│   │   ├── app/             # App Router pages
-│   │   │   ├── dashboard/   # Protected dashboard pages
-│   │   │   ├── login/       # Login page
-│   │   │   ├── register/    # Registration page
-│   │   │   └── status/      # Financial status page
-│   │   ├── components/ui/   # ShadcnUI components
-│   │   ├── lib/
-│   │   │   ├── api.ts       # API client with auth
-│   │   │   ├── auth.tsx     # AuthProvider & hooks
-│   │   │   └── supabase/    # Supabase client setup
-│   │   └── middleware.ts    # Auth middleware
-│   │
-│   ├── api/                 # Nest.js backend
-│   │   ├── prisma/          # Database schema
-│   │   └── src/
-│   │       ├── auth/        # Supabase JWT auth guard
-│   │       ├── stocks/      # Stocks module
-│   │       ├── eurobonds/   # Eurobonds module
-│   │       ├── etfs/        # ETFs module
-│   │       ├── incomes/     # Incomes module
-│   │       ├── expenses/    # Expenses module
-│   │       ├── dashboard/   # Dashboard aggregation
-│   │       └── prisma/      # Prisma service
-│   │
-│   └── docs/                # Documentation site
-│
-├── packages/                # Shared packages (planned)
-├── turbo.json
-└── package.json
+│   ├── web/           # Next.js frontend (App Router, React 19)
+│   ├── api/           # NestJS backend (Swagger docs at /api/docs)
+│   └── docs/          # Documentation site
+├── packages/
+│   ├── eslint-config/    # Shared ESLint flat configs
+│   └── typescript-config/ # Shared tsconfig presets
+├── .github/workflows/  # CI pipeline
+└── turbo.json
 ```
 
-## Features
+### Frontend Highlights
+- App Router with server/client components
+- AuthProvider context with Supabase SSR
+- Typed API client with mock/real toggle (`NEXT_PUBLIC_USE_MOCK_DATA`)
+- React Query for data fetching with optimistic cache invalidation
+- Form validation with Zod schemas
+- Toast notifications (Sonner)
+- Loading, error, and empty states on every page
 
-### Authentication
-- Supabase Auth with email/password
-- JWT token validation on API
-- Protected routes with middleware
-- Session persistence with cookies
+### Backend Highlights
+- Global `AuthGuard` (all routes protected by default, `@Public()` for exemptions)
+- Multi-tenant: every query scoped by `userId` with ownership verification
+- `ValidationPipe` globally enabled with `class-validator` on all DTOs
+- Swagger/OpenAPI documentation at `/api/docs`
+- 14 Prisma models with proper relations, cascades, and indexing
+- Live price integration: Yahoo Finance + precious metals with caching
 
-### Dashboard (`/dashboard`)
-- Total net worth overview
-- Monthly income vs expenses
-- Asset breakdown (stocks, ETFs, eurobonds)
-- Spending patterns visualization
-
-### Investments
-- **Stocks** (`/dashboard/stocks`) - Stock portfolio with profit/loss tracking
-- **Eurobonds** (`/dashboard/eurobonds`) - Bond investments with coupon tracking
-- **ETFs** (`/dashboard/etfs`) - ETF holdings with distribution history
-
-### Cash Flow
-- **Incomes** (`/dashboard/incomes`) - Salary, rent, dividends, interest
-- **Expenses** (`/dashboard/expenses`) - Categorized spending tracker
-
-### Status Page (`/status`)
-- Complete financial overview
-- All assets in one view
-- Loan tracking with interest rates
-
-## API Endpoints
-
-All endpoints require authentication via Bearer token (except health check).
-
-### Stocks
-- `GET /api/stocks` - List all stocks
-- `GET /api/stocks/:id` - Get stock details
-- `GET /api/stocks/summary` - Portfolio summary
-- `POST /api/stocks` - Add new stock
-- `PATCH /api/stocks/:id` - Update stock
-- `DELETE /api/stocks/:id` - Remove stock
-
-### Eurobonds
-- `GET /api/eurobonds` - List all eurobonds
-- `GET /api/eurobonds/:id` - Get eurobond details
-- `GET /api/eurobonds/summary` - Portfolio summary
-- `POST /api/eurobonds` - Add new eurobond
-- `PATCH /api/eurobonds/:id` - Update eurobond
-- `DELETE /api/eurobonds/:id` - Remove eurobond
-
-### ETFs
-- `GET /api/etfs` - List all ETFs
-- `GET /api/etfs/:id` - Get ETF details
-- `GET /api/etfs/summary` - Portfolio summary
-- `POST /api/etfs` - Add new ETF
-- `PATCH /api/etfs/:id` - Update ETF
-- `DELETE /api/etfs/:id` - Remove ETF
-
-### Incomes
-- `GET /api/incomes` - List incomes (filterable)
-- `GET /api/incomes/:id` - Get income details
-- `GET /api/incomes/summary` - Monthly summary
-- `POST /api/incomes` - Add new income
-- `PATCH /api/incomes/:id` - Update income
-- `DELETE /api/incomes/:id` - Remove income
-
-### Expenses
-- `GET /api/expenses` - List expenses (filterable)
-- `GET /api/expenses/:id` - Get expense details
-- `GET /api/expenses/summary` - Monthly summary by category
-- `POST /api/expenses` - Add new expense
-- `PATCH /api/expenses/:id` - Update expense
-- `DELETE /api/expenses/:id` - Remove expense
-
-### Dashboard
-- `GET /api/dashboard/overview` - Complete financial overview
-- `GET /api/dashboard/transactions` - Recent transactions
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 - Node.js 18+
-- pnpm 8+
-- Supabase account
+- pnpm 9+
 
-### Installation
+### Option 1: Mock Mode (No backend needed)
 
 ```bash
-# Clone the repository
 git clone <repo-url>
 cd FinanceLens
-
-# Install dependencies
 pnpm install
-
-# Generate Prisma client
-pnpm --filter api prisma generate
+pnpm dev --filter=web
 ```
 
-### Environment Setup
+The app runs with mock data at `http://localhost:3000`.
 
-Create `apps/web/.env.local`:
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-```
-
-Create `apps/api/.env`:
-```env
-DATABASE_URL=your-database-url
-SUPABASE_URL=your-supabase-project-url
-SUPABASE_SERVICE_KEY=your-supabase-service-key
-```
-
-### Database Setup
+### Option 2: Full Stack
 
 ```bash
-# Push schema to database
+# 1. Set up environment
+cp apps/web/.env.example apps/web/.env.local    # Fill in Supabase keys
+cp apps/api/.env.example apps/api/.env          # Fill in DATABASE_URL + Supabase
+
+# 2. Install and generate
+pnpm install
+pnpm --filter api prisma:generate
 pnpm --filter api prisma db push
 
-# Or run migrations
-pnpm --filter api prisma migrate dev
-```
-
-### Development
-
-```bash
-# Run all apps
+# 3. Run both apps
 pnpm dev
-
-# Run specific app
-pnpm dev --filter=web
-pnpm dev --filter=api
 ```
 
-### Build
+| App | URL |
+|-----|-----|
+| Web | http://localhost:3000 |
+| API | http://localhost:3001/api |
+| Swagger | http://localhost:3001/api/docs |
+
+### Switching Mock / Real Mode
+
+In `apps/web/.env.local`:
+```env
+# Mock data (default — no backend needed)
+NEXT_PUBLIC_USE_MOCK_DATA=true
+
+# Real API
+NEXT_PUBLIC_USE_MOCK_DATA=false
+```
+
+## API Endpoints
+
+All endpoints require Bearer token authentication (except health check).
+
+| Resource | Endpoints |
+|----------|-----------|
+| Stocks | `GET/POST /api/stocks`, `GET/PATCH/DELETE /api/stocks/:id`, `GET /api/stocks/summary` |
+| ETFs | `GET/POST /api/etfs`, `GET/PATCH/DELETE /api/etfs/:id`, `GET /api/etfs/summary` |
+| Eurobonds | `GET/POST /api/eurobonds`, `GET/PATCH/DELETE /api/eurobonds/:id`, `GET /api/eurobonds/summary` |
+| Incomes | `GET/POST /api/incomes`, `GET/PATCH/DELETE /api/incomes/:id`, `GET /api/incomes/summary` |
+| Expenses | `GET/POST /api/expenses`, `GET/PATCH/DELETE /api/expenses/:id`, `GET /api/expenses/summary` |
+| Cash | `GET/POST /api/cash`, `GET/PATCH/DELETE /api/cash/:id`, `GET /api/cash/summary` |
+| Gold | `GET/POST /api/gold`, `GET/PATCH/DELETE /api/gold/:id`, `GET /api/gold/summary` |
+| Silver | `GET/POST /api/silver`, `GET/PATCH/DELETE /api/silver/:id`, `GET /api/silver/summary` |
+| Dashboard | `GET /api/dashboard/overview`, `GET /api/dashboard/transactions` |
+| Prices | `GET /api/precious-metals/gold/price`, `GET /api/yahoo-finance/quote/:symbol` |
+
+Full interactive documentation available at `/api/docs` when the API is running.
+
+## Development
 
 ```bash
-# Build all apps
-pnpm build
-
-# Build specific app
-pnpm build --filter=web
-pnpm build --filter=api
+pnpm dev          # Run all apps
+pnpm build        # Build all apps
+pnpm lint         # Lint all packages
+pnpm check-types  # Type-check all packages
+pnpm test         # Run backend tests
 ```
-
-## Tax Calculations (Turkey)
-
-The app includes Turkey-specific tax calculations:
-- Eurobond withholding tax (stopaj)
-- ETF capital gains tax
-- Stock dividend taxation
-- Rental income tax
-- Interest income withholding
-
-## Localization
-
-- **Language:** Turkish (tr-TR)
-- **Currency:** TRY (₺) with USD/EUR support
-- **Date Format:** DD.MM.YYYY
-
-## Architecture Decisions
-
-### Authentication Flow
-1. User logs in via Supabase Auth on frontend
-2. Supabase returns JWT access token stored in cookies
-3. Frontend API client includes token in Authorization header
-4. API validates token with Supabase service
-5. User ID extracted from token for data queries
-
-### API Design
-- RESTful endpoints with Nest.js
-- Global AuthGuard protects all routes by default
-- `@Public()` decorator for public endpoints
-- `@CurrentUser('id')` decorator to access user ID
-- Prisma for type-safe database queries
-
-### Frontend Architecture
-- Next.js App Router with server/client components
-- AuthProvider context for auth state
-- Lazy-loaded Supabase client (SSR-safe)
-- Middleware for route protection and session refresh
 
 ## License
 
