@@ -17,7 +17,7 @@ import {
 import { useAuth } from "@/lib/auth";
 
 export default function LandingPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, signInAsDemo } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -79,11 +79,10 @@ export default function LandingPage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <Link href="/login">
-            <Button size="lg" variant="outline">
-              Sign In
-            </Button>
-          </Link>
+          <Button size="lg" variant="secondary" className="gap-2" onClick={signInAsDemo}>
+            <Wallet className="h-4 w-4" />
+            Try Live Demo
+          </Button>
         </div>
       </section>
 

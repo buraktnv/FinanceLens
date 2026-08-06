@@ -9,10 +9,25 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isDemo: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>;
+  signInAsDemo: () => void;
   signOut: () => Promise<void>;
 }
+
+const DEMO_USER_KEY = 'financelens-demo-user';
+
+const DEMO_USER: User = {
+  id: 'demo-user',
+  aud: 'authenticated',
+  role: 'authenticated',
+  email: 'demo@financelens.app',
+  app_metadata: {},
+  user_metadata: { name: 'Demo User' },
+  identities: [],
+  created_at: new Date().toISOString(),
+} as unknown as User;
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -32,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
   const supabaseRef = useRef<SupabaseClient | null>(null);
   const router = useRouter();
 
@@ -44,6 +60,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Check for demo user in localStorage first
+    if (typeof window !== 'undefined') {
+      const demoUser = window.localStorage.getItem(DEMO_USER_KEY);
+      if (demoUser) {
+        setUser(JSON.parse(demoUser));
+        setIsDemo(true);
+        setLoading(false);
+        return;
+      }
+    }
+
     const supabase = getClient();
     if (!supabase) {
       setLoading(false);
@@ -106,7 +133,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
+  const signInAsDemo = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(DEMO_USER_KEY, JSON.stringify(DEMO_USER));
+    }
+    setUser(DEMO_USER);
+    setIsDemo(true);
+    setLoading(false);
+    router.push('/dashboard');
+    router.refresh();
+  };
+
   const signOut = async () => {
+    // Clear demo session
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(DEMO_USER_KEY);
+    }
+    if (isDemo) {
+      setUser(null);
+      setIsDemo(false);
+      router.push('/login');
+      router.refresh();
+      return;
+    }
     const supabase = getClient();
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -115,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isDemo, signIn, signUp, signInAsDemo, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -75,7 +75,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isDemo } = useAuth();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
@@ -129,6 +129,11 @@ export default function DashboardLayout({
 
           {/* User section */}
           <div className="border-t p-4">
+            {isDemo && (
+              <div className="mb-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                Demo Mode — Changes are not saved
+              </div>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -163,6 +168,11 @@ export default function DashboardLayout({
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-background border-b h-16 flex items-center px-4">
         <Wallet className="h-6 w-6 text-primary mr-2" />
         <span className="text-lg font-bold">FinanceLens</span>
+        {isDemo && (
+          <span className="ml-2 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+            Demo
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-1">
           <Button
             variant="ghost"

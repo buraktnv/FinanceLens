@@ -14,7 +14,7 @@ import { useAuth } from "@/lib/auth";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn } = useAuth();
+  const { signIn, signInAsDemo } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -106,6 +106,20 @@ function LoginForm() {
             </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
+            <div className="w-full">
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+              <Button variant="secondary" className="w-full gap-2" onClick={signInAsDemo}>
+                <Wallet className="h-4 w-4" />
+                Try Live Demo
+              </Button>
+            </div>
             <div className="text-sm text-center text-muted-foreground">
               Don&apos;t have an account?{" "}
               <Link href="/register" className="text-primary hover:underline">
