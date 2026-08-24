@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { dashboardApi } from "@/lib/api";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 export default function DashboardPage() {
   const { data: overview, isLoading: overviewLoading, error: overviewError } = useQuery({
@@ -50,23 +51,15 @@ export default function DashboardPage() {
     );
   }
 
-  const formatCurrency = (value: number, currency = "USD") => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
+  const netWorth = overview?.netWorth ?? 0;
   const totalAssets = overview?.totalAssets ?? 0;
   const monthlyIncome = overview?.monthly?.income ?? 0;
   const monthlyExpenses = overview?.monthly?.expenses ?? 0;
   const monthlySavings = overview?.monthly?.savings ?? 0;
   const savingsRate = overview?.monthly?.savingsRate ?? 0;
 
-  // Calculate how long savings will last
-  const monthsOfSavings = monthlyExpenses > 0 ? Math.floor(totalAssets / monthlyExpenses) : 0;
+  // Calculate how long savings will last (runway: net worth / monthly expenses)
+  const monthsOfSavings = monthlyExpenses > 0 ? Math.floor(netWorth / monthlyExpenses) : 0;
 
   return (
     <div className="space-y-6 md:space-y-8">
@@ -207,7 +200,7 @@ export default function DashboardPage() {
                   <TransactionItem
                     key={tx.id}
                     title={tx.description || tx.category}
-                    date={new Date(tx.date).toLocaleDateString("en-US")}
+                    date={formatDate(tx.date)}
                     amount={`${tx.type === "income" ? "+" : "-"}${formatCurrency(tx.amount, tx.currency)}`}
                     type={tx.type === "income" ? "income" : "expense"}
                   />
@@ -236,14 +229,14 @@ export default function DashboardPage() {
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">Monthly Savings Rate</p>
               <p className={`text-2xl md:text-3xl font-bold ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {typeof savingsRate === "number" ? savingsRate.toFixed(1) : savingsRate}%
+                {formatPercent(savingsRate)}
               </p>
               <p className="text-xs text-muted-foreground">Of income</p>
             </div>
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">Total Assets</p>
               <p className="text-2xl md:text-3xl font-bold text-blue-600">{formatCurrency(totalAssets)}</p>
-              <p className="text-xs text-muted-foreground">Net worth</p>
+              <p className="text-xs text-muted-foreground">Sum of all assets</p>
             </div>
           </div>
         </CardContent>

@@ -35,6 +35,7 @@ import { Plus, Calendar, Loader2, Pencil, Trash2 } from "lucide-react";
 import { eurobondsApi, Eurobond } from "@/lib/api";
 import { AddEurobondForm } from "@/components/forms/add-eurobond-form";
 import { EditEurobondForm } from "@/components/forms/edit-eurobond-form";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 export default function EurobondsPage() {
   const queryClient = useQueryClient();
@@ -94,7 +95,7 @@ export default function EurobondsPage() {
   const totalFaceValue = summary?.totalFaceValue ?? 0;
   const totalCurrentValue = summary?.totalCurrentValue ?? 0;
   const annualCouponIncome = summary?.annualCouponIncome ?? 0;
-  const avgYield = totalFaceValue > 0 ? ((annualCouponIncome / totalFaceValue) * 100).toFixed(2) : "0";
+  const avgYield = totalFaceValue > 0 ? (annualCouponIncome / totalFaceValue) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -117,7 +118,7 @@ export default function EurobondsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Face Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalFaceValue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalFaceValue)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -125,7 +126,7 @@ export default function EurobondsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalCurrentValue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCurrentValue)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -133,7 +134,7 @@ export default function EurobondsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Annual Coupon Income</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${annualCouponIncome.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(annualCouponIncome)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -141,7 +142,7 @@ export default function EurobondsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Average Yield</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">%{avgYield}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatPercent(avgYield)}</div>
           </CardContent>
         </Card>
       </div>
@@ -180,19 +181,21 @@ export default function EurobondsPage() {
                     <TableRow key={bond.id}>
                       <TableCell className="font-medium">{bond.name}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">{bond.isin || "-"}</TableCell>
-                      <TableCell className="text-right">${faceValue.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{purchasePrice.toFixed(2)}%</TableCell>
+                      <TableCell className="text-right">{formatCurrency(faceValue, bond.currency)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(purchasePrice, bond.currency)}</TableCell>
                       <TableCell className="text-right">
-                        <Badge variant="secondary">%{couponRate.toFixed(2)}</Badge>
+                        <Badge variant="secondary">{formatPercent(couponRate)}</Badge>
                       </TableCell>
                       <TableCell className="text-right text-sm">
                         <div className="flex items-center justify-end gap-1">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                          <span>{maturityDate.toLocaleDateString("en-US")}</span>
+                          <span>{formatDate(bond.maturityDate)}</span>
                           <span className="text-muted-foreground text-xs">({yearsToMaturity} yrs)</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-sm text-green-600">${annualIncome.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm text-green-600">
+                        {formatCurrency(annualIncome, bond.currency)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
                           <Button
@@ -309,8 +312,8 @@ export default function EurobondsPage() {
                   <CouponItem
                     key={payment.id}
                     bond={bond.name}
-                    date={new Date(payment.paymentDate).toLocaleDateString("en-US")}
-                    amount={`$${Number(payment.amount).toLocaleString()}`}
+                    date={formatDate(payment.paymentDate)}
+                    amount={formatCurrency(Number(payment.amount), payment.currency)}
                   />
                 ))
               ).slice(0, 5)}

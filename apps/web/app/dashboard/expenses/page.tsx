@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { expensesApi, Expense } from "@/lib/api";
 import { AddExpenseForm } from "@/components/forms/add-expense-form";
 import { EditExpenseForm } from "@/components/forms/edit-expense-form";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 const expenseCategories: Record<string, { label: string; color: string }> = {
   RENT: { label: "Rent", color: "bg-red-100 text-red-800" },
@@ -96,14 +97,17 @@ export default function ExpensesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // API expects 1-based month
+  const currentYear = now.getFullYear();
   const { data: expenses = [], isLoading: expensesLoading, error: expensesError } = useQuery({
     queryKey: ["expenses"],
     queryFn: () => expensesApi.getAll(),
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["expenses", "summary"],
-    queryFn: () => expensesApi.getSummary(),
+    queryKey: ["expenses", "summary", currentYear, currentMonth],
+    queryFn: () => expensesApi.getSummary(currentMonth, currentYear),
   });
 
   const isLoading = expensesLoading || summaryLoading;
@@ -172,7 +176,7 @@ export default function ExpensesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">This Month Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-red-600">${totalThisMonth.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-red-600">{formatCurrency(totalThisMonth)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -180,7 +184,7 @@ export default function ExpensesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Fixed Expenses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalRecurring.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalRecurring)}</div>
             <p className="text-xs text-muted-foreground">Monthly recurring</p>
           </CardContent>
         </Card>
@@ -208,20 +212,20 @@ export default function ExpensesPage() {
                 .sort(([, a], [, b]) => b - a)
                 .map(([category, amount]) => {
                   const categoryInfo = expenseCategories[category] ?? expenseCategories.OTHER!;
-                  const percentage = totalThisMonth > 0 ? ((amount / totalThisMonth) * 100).toFixed(1) : "0";
+                  const pct = totalThisMonth > 0 ? (amount / totalThisMonth) * 100 : 0;
                   return (
                     <div key={category} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
-                          <span className="text-sm text-muted-foreground">{percentage}%</span>
+                          <span className="text-sm text-muted-foreground">{formatPercent(pct)}</span>
                         </div>
-                        <span className="font-medium text-sm sm:text-base">${Number(amount).toLocaleString()}</span>
+                        <span className="font-medium text-sm sm:text-base">{formatCurrency(amount)}</span>
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full"
-                          style={{ width: `${percentage}%` }}
+                          style={{ width: `${pct}%` }}
                         />
                       </div>
                     </div>
@@ -265,9 +269,9 @@ export default function ExpensesPage() {
                       </TableCell>
                       <TableCell className="text-sm">{expense.description || "-"}</TableCell>
                       <TableCell className="text-right font-medium text-sm text-red-600">
-                        -${amount.toLocaleString()}
+                        -{formatCurrency(amount, expense.currency)}
                       </TableCell>
-                      <TableCell className="text-sm">{new Date(expense.date).toLocaleDateString("en-US")}</TableCell>
+                      <TableCell className="text-sm">{formatDate(expense.date)}</TableCell>
                       <TableCell>
                         {expense.paymentMethod ? (
                           <Badge variant="outline">

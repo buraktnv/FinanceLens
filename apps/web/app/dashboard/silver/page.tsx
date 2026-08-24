@@ -35,6 +35,7 @@ import { silverApi, preciousMetalsApi, Silver } from "@/lib/api";
 import { AddSilverForm } from "@/components/forms/add-silver-form";
 import { EditSilverForm } from "@/components/forms/edit-silver-form";
 import { toast } from "sonner";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 export default function SilverPage() {
   const queryClient = useQueryClient();
@@ -89,10 +90,6 @@ export default function SilverPage() {
   const filteredHoldings = holdings.filter((silver) =>
     silver.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const formatCurrency = (value: number, decimals = 2) => {
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-  };
 
   const handleDelete = () => {
     if (deletingSilver) {
@@ -151,7 +148,7 @@ export default function SilverPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost, "TRY")}</div>
           </CardContent>
         </Card>
         <Card>
@@ -159,10 +156,10 @@ export default function SilverPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentValue)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentValue, "TRY")}</div>
             {currentPrice && (
               <p className="text-xs text-muted-foreground mt-1">
-                ${currentPrice.toFixed(3)}/gram
+                {formatCurrency(currentPrice, "TRY")}/gram
                 {lastUpdated && (
                   <span className="ml-2">
                     (Updated: {lastUpdated.toLocaleTimeString("en-US")})
@@ -179,10 +176,10 @@ export default function SilverPage() {
           <CardContent>
             <div className={`text-xl sm:text-2xl font-bold flex items-center ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitLoss >= 0 ? <TrendingUp className="mr-1 h-5 w-5" /> : <TrendingDown className="mr-1 h-5 w-5" />}
-              {formatCurrency(Math.abs(profitLoss))}
+              {formatCurrency(Math.abs(profitLoss), "TRY")}
             </div>
             <p className={`text-sm ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profitLoss >= 0 ? '+' : '-'}{Math.abs(profitLossPercent).toFixed(2)}%
+              {profitLoss >= 0 ? '+' : '-'}{formatPercent(Math.abs(profitLossPercent))}
             </p>
           </CardContent>
         </Card>
@@ -239,15 +236,15 @@ export default function SilverPage() {
                     <TableRow key={silver.id}>
                       <TableCell className="font-medium">{silver.name}</TableCell>
                       <TableCell className="text-right">{quantity.toFixed(3)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(purchasePrice, 3)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(purchasePrice, "TRY")}</TableCell>
                       <TableCell className="text-right">
-                        {currentPrice ? formatCurrency(currentPrice, 3) : "-"}
+                        {currentPrice ? formatCurrency(currentPrice, "TRY") : "-"}
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(current)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(current, "TRY")}</TableCell>
                       <TableCell className="text-right">
                         {currentPrice ? (
                           <span className={profit >= 0 ? "text-green-600" : "text-red-600"}>
-                            {formatCurrency(profit)} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%)
+                            {formatCurrency(profit, "TRY")} ({profitPercent >= 0 ? '+' : ''}{formatPercent(profitPercent)})
                           </span>
                         ) : (
                           "-"

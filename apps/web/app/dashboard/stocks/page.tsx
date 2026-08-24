@@ -36,6 +36,7 @@ import { AddStockForm } from "@/components/forms/add-stock-form";
 import { EditStockForm } from "@/components/forms/edit-stock-form";
 import { StockChart } from "@/components/stock-chart";
 import { toast } from "sonner";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 export default function StocksPage() {
   const queryClient = useQueryClient();
@@ -74,11 +75,6 @@ export default function StocksPage() {
       stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
       stock.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const formatCurrency = (value: number, currency = "USD", decimals = 2) => {
-    const symbol = currency === "USD" ? "$" : currency === "TRY" ? "₺" : "€";
-    return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-  };
 
   const handleDelete = () => {
     if (deletingStock) {
@@ -156,7 +152,7 @@ export default function StocksPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalCost.toLocaleString("en-US")}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -164,7 +160,7 @@ export default function StocksPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Dividends</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalDividends.toLocaleString("en-US")}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(totalDividends)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -227,7 +223,7 @@ export default function StocksPage() {
                       <TableCell className="font-medium">{stock.symbol}</TableCell>
                       <TableCell>{stock.name}</TableCell>
                       <TableCell className="text-right">{quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(purchasePrice, stock.currency, 3)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(purchasePrice, stock.currency)}</TableCell>
                       <TableCell className="text-right">
                         {currentPrice ? (
                           formatCurrency(currentPrice, stock.currency)
@@ -246,14 +242,14 @@ export default function StocksPage() {
                             </div>
                             {profitLossPercent !== null && (
                               <div className="text-xs">
-                                ({profitLoss >= 0 ? "+" : ""}{profitLossPercent.toFixed(2)}%)
+                                ({profitLoss >= 0 ? "+" : ""}{formatPercent(profitLossPercent)})
                               </div>
                             )}
                           </div>
                         ) : "-"}
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        {new Date(stock.purchaseDate).toLocaleDateString("en-US")}
+                        {formatDate(stock.purchaseDate)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">

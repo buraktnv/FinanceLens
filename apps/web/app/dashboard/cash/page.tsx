@@ -35,6 +35,7 @@ import { cashApi, Cash } from "@/lib/api";
 import { AddCashForm } from "@/components/forms/add-cash-form";
 import { EditCashForm } from "@/components/forms/edit-cash-form";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/format";
 
 export default function CashPage() {
   const queryClient = useQueryClient();
@@ -71,11 +72,6 @@ export default function CashPage() {
       cash.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (cash.bankName && cash.bankName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  const formatCurrency = (value: number, currency = "USD") => {
-    const symbol = currency === "USD" ? "$" : currency === "TRY" ? "₺" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency;
-    return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const handleDelete = () => {
     if (deletingCash) {
@@ -129,10 +125,10 @@ export default function CashPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance (USD)</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalBalance.toLocaleString("en-US")}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalBalance)}</div>
           </CardContent>
         </Card>
         <Card>

@@ -35,6 +35,7 @@ import { Plus, Loader2, Pencil, Trash2 } from "lucide-react";
 import { etfsApi, ETF } from "@/lib/api";
 import { AddETFForm } from "@/components/forms/add-etf-form";
 import { EditETFForm } from "@/components/forms/edit-etf-form";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 export default function ETFsPage() {
   const queryClient = useQueryClient();
@@ -115,7 +116,7 @@ export default function ETFsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalValue.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalValue)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -123,7 +124,7 @@ export default function ETFsPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Distributions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalDistributions.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(totalDistributions)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -169,15 +170,15 @@ export default function ETFsPage() {
                       <TableCell className="font-medium">{etf.symbol}</TableCell>
                       <TableCell>{etf.name}</TableCell>
                       <TableCell className="text-right">{quantity}</TableCell>
-                      <TableCell className="text-right">${purchasePrice.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(purchasePrice, etf.currency)}</TableCell>
                       <TableCell className="text-right">
                         {expenseRatio !== null ? (
-                          <Badge variant="outline">%{expenseRatio.toFixed(2)}</Badge>
+                          <Badge variant="outline">{formatPercent(expenseRatio)}</Badge>
                         ) : "-"}
                       </TableCell>
-                      <TableCell className="text-right text-sm">${totalCost.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm">{formatCurrency(totalCost, etf.currency)}</TableCell>
                       <TableCell className="text-right text-sm">
-                        {new Date(etf.purchaseDate).toLocaleDateString("en-US")}
+                        {formatDate(etf.purchaseDate)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
@@ -296,8 +297,8 @@ export default function ETFsPage() {
                     key={dist.id}
                     etf={etf.symbol}
                     type={dist.type}
-                    date={new Date(dist.paymentDate).toLocaleDateString("en-US")}
-                    amount={`$${Number(dist.amount).toFixed(2)}`}
+                    date={formatDate(dist.paymentDate)}
+                    amount={formatCurrency(Number(dist.amount), dist.currency)}
                   />
                 ))
               ).slice(0, 5)}

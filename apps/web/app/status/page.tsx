@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { dashboardApi, incomesApi, expensesApi } from "@/lib/api";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 export default function StatusPage() {
   const { data: overview, isLoading, error } = useQuery({
@@ -68,9 +69,6 @@ export default function StatusPage() {
     overview.breakdown.cash.value +
     overview.breakdown.gold.value +
     overview.breakdown.silver.value;
-
-  const formatCurrency = (value: number) =>
-    `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -131,11 +129,11 @@ export default function StatusPage() {
               <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Monthly Savings</p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(monthlySavings)}</p>
-                <p className="text-xs text-muted-foreground">{savingsRate.toFixed(1)}% of income</p>
+                <p className="text-xs text-muted-foreground">{formatPercent(savingsRate)} of income</p>
               </div>
               <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-lg">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Save Rate</p>
-                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{savingsRate.toFixed(1)}%</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{formatPercent(savingsRate)}</p>
                 <p className="text-xs text-muted-foreground">{formatCurrency(monthlyIncome)}/mo income</p>
               </div>
             </div>
@@ -191,7 +189,7 @@ export default function StatusPage() {
               <SummaryItem label="Income" value={formatCurrency(monthlyIncome)} type="income" />
               <SummaryItem label="Expenses" value={formatCurrency(monthlyExpenses)} type="expense" />
               <SummaryItem label="Savings" value={formatCurrency(monthlySavings)} type="savings" />
-              <SummaryItem label="Save Rate" value={`${savingsRate.toFixed(1)}%`} type="rate" />
+              <SummaryItem label="Save Rate" value={formatPercent(savingsRate)} type="rate" />
             </div>
 
             {/* Detailed Breakdown */}
@@ -373,7 +371,7 @@ function CashFlowItem({
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex-1">
           <div className={`h-full ${color} rounded-full`} style={{ width: `${percentage}%` }} />
         </div>
-        <span className="text-xs text-muted-foreground w-10 text-right">{percentage.toFixed(1)}%</span>
+        <span className="text-xs text-muted-foreground w-10 text-right">{formatPercent(percentage)}</span>
       </div>
     </div>
   );

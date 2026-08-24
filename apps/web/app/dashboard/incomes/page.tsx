@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { incomesApi, Income } from "@/lib/api";
 import { AddIncomeForm } from "@/components/forms/add-income-form";
 import { EditIncomeForm } from "@/components/forms/edit-income-form";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const incomeTypes: Record<string, { label: string; color: string }> = {
   SALARY: { label: "Salary", color: "bg-blue-100 text-blue-800" },
@@ -64,14 +65,17 @@ export default function IncomesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // API expects 1-based month
+  const currentYear = now.getFullYear();
   const { data: incomes = [], isLoading: incomesLoading, error: incomesError } = useQuery({
     queryKey: ["incomes"],
     queryFn: () => incomesApi.getAll(),
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["incomes", "summary"],
-    queryFn: () => incomesApi.getSummary(),
+    queryKey: ["incomes", "summary", currentYear, currentMonth],
+    queryFn: () => incomesApi.getSummary(currentMonth, currentYear),
   });
 
   const isLoading = incomesLoading || summaryLoading;
@@ -140,7 +144,7 @@ export default function IncomesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">This Month Total</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalThisMonth.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(totalThisMonth)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -148,7 +152,7 @@ export default function IncomesPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Recurring Income</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalRecurring.toLocaleString()}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalRecurring)}</div>
             <p className="text-xs text-muted-foreground">Monthly recurring</p>
           </CardContent>
         </Card>
@@ -212,9 +216,9 @@ export default function IncomesPage() {
                       </TableCell>
                       <TableCell className="text-sm">{income.description || "-"}</TableCell>
                       <TableCell className="text-right font-medium text-sm text-green-600">
-                        +${amount.toLocaleString()}
+                        +{formatCurrency(amount, income.currency)}
                       </TableCell>
-                      <TableCell className="text-sm">{new Date(income.date).toLocaleDateString("en-US")}</TableCell>
+                      <TableCell className="text-sm">{formatDate(income.date)}</TableCell>
                       <TableCell>
                         {income.isRecurring && income.frequency ? (
                           <Badge variant="outline" className="gap-1">
@@ -333,7 +337,7 @@ function IncomeTypeCard({ type, amount }: { type: string; amount: number }) {
   return (
     <div className="p-4 bg-gray-50 rounded-lg text-center">
       <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
-      <p className="text-lg sm:text-xl font-bold mt-2">${Number(amount).toLocaleString()}</p>
+      <p className="text-lg sm:text-xl font-bold mt-2">{formatCurrency(amount)}</p>
     </div>
   );
 }
