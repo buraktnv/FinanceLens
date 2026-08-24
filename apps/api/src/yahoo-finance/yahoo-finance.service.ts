@@ -144,6 +144,10 @@ export class YahooFinanceService {
       if (error instanceof HttpException) {
         throw error;
       }
+      const errorName = (error as { name?: string })?.name;
+      if (errorName === 'TimeoutError' || errorName === 'AbortError') {
+        throw new ServiceUnavailableException('Yahoo Finance search timed out');
+      }
       throw new HttpException(
         'Failed to search symbol',
         HttpStatus.INTERNAL_SERVER_ERROR,

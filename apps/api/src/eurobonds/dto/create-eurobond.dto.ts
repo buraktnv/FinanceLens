@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsDateString,
   Min,
+  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -49,6 +50,9 @@ export class CreateEurobondDto {
   })
   @IsNumber()
   @Min(0)
+  @Max(1, {
+    message: 'Kupon oranı ondalık kesir olmalı (örn. 0.0525)',
+  })
   couponRate: number;
 
   @ApiPropertyOptional({
