@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { SupabaseService } from './supabase.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import type { RequestWithUser } from './request-with-user';
 import { PrismaService } from '../prisma';
 
 @Injectable()
@@ -28,7 +29,7 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -47,6 +48,8 @@ export class AuthGuard implements CanActivate {
 
     // Ensure user exists in database (create only on first sighting).
     // Read-on-miss: avoid a DB write on every authenticated request.
+    const metadata = user.user_metadata as { name?: string | null } | undefined;
+
     let existingUser = await this.prisma.user.findUnique({
       where: { id: user.id },
     });
@@ -57,7 +60,7 @@ export class AuthGuard implements CanActivate {
           data: {
             id: user.id,
             email: user.email,
-            name: user.user_metadata?.name,
+            name: metadata?.name,
           },
         });
       } catch (error) {
@@ -79,7 +82,7 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
+  private extractTokenFromHeader(request: RequestWithUser): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }

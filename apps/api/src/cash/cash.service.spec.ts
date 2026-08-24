@@ -17,11 +17,16 @@ describe('CashService', () => {
   const userId = 'user-1';
   const cashId = 'cash-1';
 
+  // Minimal stand-in for Prisma.Decimal: the service only calls Number() on it.
+  const decimalLike = (value: string): { toString: () => string } => ({
+    toString: () => value,
+  });
+
   const mockCash = {
     id: cashId,
     userId,
     accountName: 'Main Account',
-    balance: { toString: () => '1000' } as any,
+    balance: decimalLike('1000'),
     currency: 'TRY',
     accountType: 'BANK',
     bankName: 'Bank',
@@ -86,9 +91,9 @@ describe('CashService', () => {
     it('should throw NotFoundException when the account does not exist', async () => {
       prismaService.cash.updateMany.mockResolvedValue({ count: 0 });
 
-      await expect(
-        service.update(userId, 'missing-cash', {}),
-      ).rejects.toThrow(new NotFoundException('Cash account not found'));
+      await expect(service.update(userId, 'missing-cash', {})).rejects.toThrow(
+        new NotFoundException('Cash account not found'),
+      );
     });
   });
 

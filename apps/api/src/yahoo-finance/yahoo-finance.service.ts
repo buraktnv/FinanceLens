@@ -36,6 +36,51 @@ export interface YahooSearchResult {
   exchange: string;
 }
 
+/**
+ * Upstream Yahoo Finance payloads are genuinely dynamic third-party JSON, so
+ * they are parsed into these shapes and trusted only after the explicit
+ * runtime guards below.
+ */
+interface YahooSearchQuote {
+  symbol: string;
+  shortname?: string;
+  longname?: string;
+  quoteType?: string;
+  exchange?: string;
+}
+
+interface YahooSearchResponse {
+  quotes?: YahooSearchQuote[];
+}
+
+export interface YahooChartMeta {
+  symbol: string;
+  longName?: string;
+  regularMarketPrice?: number;
+  previousClose?: number;
+  currency: string;
+  marketState: string;
+}
+
+interface YahooChartResponse<Result> {
+  chart?: { result?: Result[] };
+}
+
+export interface YahooHistoricalResult {
+  meta?: Partial<YahooChartMeta>;
+  timestamp?: number[];
+  indicators?: {
+    quote?: Array<{
+      open?: Array<number | null>;
+      high?: Array<number | null>;
+      low?: Array<number | null>;
+      close?: Array<number | null>;
+      volume?: Array<number | null>;
+    }>;
+    adjclose?: Array<{ adjclose?: Array<number | null> }>;
+  };
+}
+
 @Injectable()
 export class YahooFinanceService {
   private static readonly fxCache = new Map<
@@ -83,13 +128,13 @@ export class YahooFinanceService {
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as YahooSearchResponse;
 
       if (!data.quotes || data.quotes.length === 0) {
         return [];
       }
 
-      return data.quotes.map((quote: any) => ({
+      return data.quotes.map((quote) => ({
         symbol: quote.symbol,
         name: quote.shortname || quote.longname || quote.symbol,
         type: quote.quoteType || 'EQUITY',
@@ -124,7 +169,9 @@ export class YahooFinanceService {
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as YahooChartResponse<{
+        meta: YahooChartMeta;
+      }>;
 
       if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
         throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);
@@ -213,7 +260,7 @@ export class YahooFinanceService {
     period1: number,
     period2: number,
     interval: string = '1d',
-  ): Promise<any> {
+  ): Promise<YahooHistoricalResult> {
     const safeInterval = this.assertValidInterval(interval);
 
     try {
@@ -230,7 +277,8 @@ export class YahooFinanceService {
         );
       }
 
-      const data = await response.json();
+      const data =
+        (await response.json()) as YahooChartResponse<YahooHistoricalResult>;
 
       if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
         throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);

@@ -12,8 +12,6 @@ describe('ExpensesController input validation', () => {
   const remove = jest.fn().mockResolvedValue(undefined);
   const getSummary = jest.fn().mockResolvedValue({ total: 0 });
 
-  const VALID_UUID = '123e4567-e89b-12d3-a456-426614174000';
-
   beforeEach(async () => {
     findAll.mockClear().mockResolvedValue([]);
     findOne.mockClear().mockResolvedValue(null);
@@ -39,7 +37,7 @@ describe('ExpensesController input validation', () => {
 
     app = moduleRef.createNestApplication();
     // Simulate the authenticated user that the global guard would attach.
-    app.use((req: any, _res: any, next: () => void) => {
+    app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
       req.user = { id: 'user-1' };
       next();
     });

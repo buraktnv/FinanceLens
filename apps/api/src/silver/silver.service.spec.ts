@@ -17,12 +17,17 @@ describe('SilverService', () => {
   const userId = 'user-1';
   const silverId = 'silver-1';
 
+  // Minimal stand-in for Prisma.Decimal: the service only calls Number() on it.
+  const decimalLike = (value: string): { toString: () => string } => ({
+    toString: () => value,
+  });
+
   const mockHolding = {
     id: silverId,
     userId,
     name: 'Silver Bar',
-    quantity: { toString: () => '100' } as any,
-    purchasePrice: { toString: () => '30' } as any,
+    quantity: decimalLike('100'),
+    purchasePrice: decimalLike('30'),
   };
 
   beforeEach(async () => {

@@ -39,7 +39,7 @@ describe('IncomesController input validation', () => {
 
     app = moduleRef.createNestApplication();
     // Simulate the authenticated user that the global guard would attach.
-    app.use((req: any, _res: any, next: () => void) => {
+    app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
       req.user = { id: 'user-1' };
       next();
     });

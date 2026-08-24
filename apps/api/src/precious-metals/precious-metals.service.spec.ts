@@ -10,25 +10,26 @@ describe('PreciousMetalsService', () => {
   const usdToTry = 40;
 
   function stubYahooQuotes(metalPriceUsdPerOunce: number): void {
-    fetchMock.mockImplementation(async (input: any) => {
+    fetchMock.mockImplementation((input: unknown) => {
       const url = String(input);
       const symbol = decodeURIComponent(
         url.split('/v8/finance/chart/')[1].split('?')[0],
       );
       const regularMarketPrice =
         symbol === 'USDTRY=X' ? usdToTry : metalPriceUsdPerOunce;
-      return {
+      return Promise.resolve({
         ok: true,
-        json: async () => ({
-          chart: {
-            result: [
-              {
-                meta: { symbol, regularMarketPrice, currency: 'USD' },
-              },
-            ],
-          },
-        }),
-      };
+        json: () =>
+          Promise.resolve({
+            chart: {
+              result: [
+                {
+                  meta: { symbol, regularMarketPrice, currency: 'USD' },
+                },
+              ],
+            },
+          }),
+      });
     });
   }
 

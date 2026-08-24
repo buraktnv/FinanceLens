@@ -8,7 +8,10 @@ import { PrismaService } from '../prisma';
 
 describe('YahooFinanceController input validation', () => {
   let app: INestApplication;
-  let fetchMock: jest.Mock;
+  let fetchMock: jest.Mock<
+    Promise<{ ok: boolean; json: () => Promise<unknown> }>,
+    [string]
+  >;
 
   const AUTH_HEADER = 'Bearer test-token';
 
@@ -48,9 +51,14 @@ describe('YahooFinanceController input validation', () => {
     );
     await app.init();
 
-    fetchMock = jest.fn().mockResolvedValue({
+    fetchMock = jest.fn<
+      Promise<{ ok: boolean; json: () => Promise<unknown> }>,
+      [string]
+    >();
+    fetchMock.mockResolvedValue({
       ok: true,
-      json: async () => ({ chart: { result: [{ meta: { symbol: 'AAPL' } }] } }),
+      json: () =>
+        Promise.resolve({ chart: { result: [{ meta: { symbol: 'AAPL' } }] } }),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
   });
@@ -101,7 +109,7 @@ describe('YahooFinanceController input validation', () => {
         .expect(200);
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      const url = fetchMock.mock.calls[0][0] as string;
+      const url = fetchMock.mock.calls[0][0];
       expect(url).toContain(
         '/v8/finance/chart/' +
           encodeURIComponent('AAPL') +
@@ -117,7 +125,7 @@ describe('YahooFinanceController input validation', () => {
         .set('Authorization', AUTH_HEADER)
         .expect(200);
 
-      const url = fetchMock.mock.calls[0][0] as string;
+      const url = fetchMock.mock.calls[0][0];
       expect(url).toContain('interval=1d');
     });
   });

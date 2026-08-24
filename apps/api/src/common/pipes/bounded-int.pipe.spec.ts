@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { ArgumentMetadata, BadRequestException } from '@nestjs/common';
 import {
   BoundedIntPipe,
   LIMIT_PIPE,
@@ -7,7 +7,11 @@ import {
 } from './bounded-int.pipe';
 
 describe('BoundedIntPipe', () => {
-  const metadata = { type: 'query', metatype: String, data: 'limit' } as any;
+  const metadata: ArgumentMetadata = {
+    type: 'query',
+    metatype: String,
+    data: 'limit',
+  };
 
   it('passes undefined through untouched (optional query params)', async () => {
     await expect(

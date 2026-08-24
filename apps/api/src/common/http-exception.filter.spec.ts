@@ -1,9 +1,4 @@
-import {
-  ArgumentsHost,
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { ArgumentsHost, BadRequestException, HttpStatus } from '@nestjs/common';
 import { AllExceptionsFilter } from './http-exception.filter';
 
 describe('AllExceptionsFilter', () => {
@@ -19,7 +14,7 @@ describe('AllExceptionsFilter', () => {
   }
 
   function buildResponse() {
-    const json = jest.fn();
+    const json = jest.fn<undefined, [unknown]>();
     const status = jest.fn().mockReturnValue({ json });
     return { status, json };
   }

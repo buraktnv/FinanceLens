@@ -22,13 +22,18 @@ describe('StocksService', () => {
   const userId = 'user-1';
   const stockId = 'stock-1';
 
+  // Minimal stand-in for Prisma.Decimal: the service only calls Number() on it.
+  const decimalLike = (value: string): { toString: () => string } => ({
+    toString: () => value,
+  });
+
   const mockStock = {
     id: stockId,
     userId,
     symbol: 'AAPL',
     name: 'Apple Inc.',
-    quantity: { toString: () => '10' } as any,
-    purchasePrice: { toString: () => '150' } as any,
+    quantity: decimalLike('10'),
+    purchasePrice: decimalLike('150'),
     currency: 'USD',
     purchaseDate: new Date('2024-01-01'),
     broker: 'XTB',
@@ -90,7 +95,7 @@ describe('StocksService', () => {
             symbol: 'AAPL',
             name: 'Apple Inc.',
             currency: 'USD',
-          }),
+          }) as Record<string, unknown>,
           include: { dividends: true },
         }),
       );
@@ -166,7 +171,7 @@ describe('StocksService', () => {
         where: { id: stockId, userId },
         data: expect.objectContaining({
           name: 'Apple Inc. Updated',
-        }),
+        }) as Record<string, unknown>,
       });
       expect(prismaService.stock.findUnique).toHaveBeenCalledWith({
         where: { id: stockId },
@@ -235,11 +240,11 @@ describe('StocksService', () => {
     it('should aggregate portfolio cost and dividends', async () => {
       const stockWithDividends = {
         ...mockStock,
-        quantity: { toString: () => '10' } as any,
-        purchasePrice: { toString: () => '150' } as any,
+        quantity: decimalLike('10'),
+        purchasePrice: decimalLike('150'),
         dividends: [
-          { amount: { toString: () => '50' } as any },
-          { amount: { toString: () => '25' } as any },
+          { amount: decimalLike('50') },
+          { amount: decimalLike('25') },
         ],
       };
 
@@ -269,15 +274,15 @@ describe('StocksService', () => {
     it('should return net dividends after withholding in the summary', async () => {
       const stockWithTaxedDividends = {
         ...mockStock,
-        quantity: { toString: () => '10' } as any,
-        purchasePrice: { toString: () => '150' } as any,
+        quantity: decimalLike('10'),
+        purchasePrice: decimalLike('150'),
         dividends: [
           {
-            amount: { toString: () => '100' } as any,
-            taxWithheld: { toString: () => '15' } as any,
+            amount: decimalLike('100'),
+            taxWithheld: decimalLike('15'),
           },
-          { amount: { toString: () => '50' } as any, taxWithheld: null },
-          { amount: { toString: () => '25' } as any },
+          { amount: decimalLike('50'), taxWithheld: null },
+          { amount: decimalLike('25') },
         ],
       };
 

@@ -36,7 +36,10 @@ describe('EtfsService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [EtfsService, { provide: PrismaService, useValue: prismaService }],
+      providers: [
+        EtfsService,
+        { provide: PrismaService, useValue: prismaService },
+      ],
     }).compile();
 
     service = module.get<EtfsService>(EtfsService);

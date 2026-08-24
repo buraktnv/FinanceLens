@@ -45,7 +45,7 @@ export class IncomesService {
     userId: string,
     filters?: { type?: IncomeType; startDate?: string; endDate?: string },
   ) {
-    const where: any = { userId };
+    const where: Prisma.IncomeWhereInput = { userId };
 
     if (filters?.type) {
       where.type = filters.type;

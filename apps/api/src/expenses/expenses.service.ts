@@ -51,7 +51,7 @@ export class ExpensesService {
       paymentMethod?: PaymentMethod;
     },
   ) {
-    const where: any = { userId };
+    const where: Prisma.ExpenseWhereInput = { userId };
 
     if (filters?.category) where.category = filters.category;
     if (filters?.paymentMethod) where.paymentMethod = filters.paymentMethod;

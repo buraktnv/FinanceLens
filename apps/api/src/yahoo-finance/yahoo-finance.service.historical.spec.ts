@@ -3,9 +3,12 @@ import { YahooFinanceService } from './yahoo-finance.service';
 
 describe('YahooFinanceService historical/quote hardening', () => {
   let service: YahooFinanceService;
-  const fetchMock = jest.fn();
+  const fetchMock = jest.fn<
+    Promise<{ ok: boolean; json: () => Promise<unknown> }>,
+    [string]
+  >();
 
-  beforeEach(async () => {
+  beforeEach(() => {
     fetchMock.mockReset();
     global.fetch = fetchMock as unknown as typeof fetch;
     service = new YahooFinanceService();
@@ -29,12 +32,12 @@ describe('YahooFinanceService historical/quote hardening', () => {
     it('encodes the whitelisted interval into the upstream URL', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: async () => ({ chart: { result: [{ meta: {} }] } }),
+        json: () => Promise.resolve({ chart: { result: [{ meta: {} }] } }),
       });
 
       await service.getHistoricalData('AAPL', 1700000000, 1700086400, '1wk');
 
-      const url = fetchMock.mock.calls[0][0] as string;
+      const url = fetchMock.mock.calls[0][0];
       expect(url).toContain(
         '/v8/finance/chart/' +
           encodeURIComponent('AAPL') +
@@ -47,22 +50,23 @@ describe('YahooFinanceService historical/quote hardening', () => {
     it('returns 0 change percent instead of Infinity when previousClose is 0', async () => {
       fetchMock.mockResolvedValue({
         ok: true,
-        json: async () => ({
-          chart: {
-            result: [
-              {
-                meta: {
-                  symbol: 'AAPL',
-                  longName: 'Apple Inc.',
-                  regularMarketPrice: 150,
-                  previousClose: 0,
-                  currency: 'USD',
-                  marketState: 'REGULAR',
+        json: () =>
+          Promise.resolve({
+            chart: {
+              result: [
+                {
+                  meta: {
+                    symbol: 'AAPL',
+                    longName: 'Apple Inc.',
+                    regularMarketPrice: 150,
+                    previousClose: 0,
+                    currency: 'USD',
+                    marketState: 'REGULAR',
+                  },
                 },
-              },
-            ],
-          },
-        }),
+              ],
+            },
+          }),
       });
 
       const quote = await service.getQuote('AAPL');

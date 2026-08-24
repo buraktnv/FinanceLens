@@ -21,10 +21,15 @@ describe('ExpensesService', () => {
   const userId = 'user-1';
   const expenseId = 'expense-1';
 
+  // Minimal stand-in for Prisma.Decimal: the service only calls Number() on it.
+  const decimalLike = (value: string): { toString: () => string } => ({
+    toString: () => value,
+  });
+
   const mockExpense = {
     id: expenseId,
     userId,
-    amount: { toString: () => '250' } as any,
+    amount: decimalLike('250'),
     currency: 'TRY',
     category: ExpenseCategory.GROCERIES,
     description: 'Weekly groceries',
@@ -90,7 +95,10 @@ describe('ExpensesService', () => {
         where: { id: 'property-1', userId },
       });
       expect(prismaService.expense.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ userId, propertyId: 'property-1' }),
+        data: expect.objectContaining({
+          userId,
+          propertyId: 'property-1',
+        }) as Record<string, unknown>,
         include: { property: true },
       });
       expect(result.propertyId).toBe('property-1');
