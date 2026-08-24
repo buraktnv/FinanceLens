@@ -14,7 +14,7 @@ export class PreciousMetalsService {
   private readonly baseUrl = 'https://query1.finance.yahoo.com';
 
   // Constants
-  private readonly GRAMS_PER_OUNCE = 28.3495;
+  private readonly GRAMS_PER_TROY_OUNCE = 31.1035;
   private readonly GOLD_SYMBOL = 'GC=F'; // Gold futures
   private readonly SILVER_SYMBOL = 'SI=F'; // Silver futures
   private readonly USDTRY_SYMBOL = 'USDTRY=X'; // USD/TRY exchange rate
@@ -60,7 +60,7 @@ export class PreciousMetalsService {
 
       // Convert USD/oz to TRY/gram
       const tryPerOunce = usdPerOunce * usdToTry;
-      const tryPerGram = tryPerOunce / this.GRAMS_PER_OUNCE;
+      const tryPerGram = tryPerOunce / this.GRAMS_PER_TROY_OUNCE;
 
       const result: PreciousMetalPrice = {
         metal,
