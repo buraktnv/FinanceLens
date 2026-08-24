@@ -190,7 +190,7 @@
 
     <div class="metrics">
       <div class="metric"><div class="num">196</div><div class="lbl">birim test · 139 API (Jest) + 57 Web (Vitest)</div></div>
-      <div class="metric"><div class="num">25 / 36</div><div class="lbl">bulgu düzeltildi · kalan 11 bilinçli erteleme</div></div>
+      <div class="metric"><div class="num">25 / 36</div><div class="lbl">bulgu düzeltildi · kalan 11: 4 tasarım kararı + 7 küçük kalıntı</div></div>
       <div class="metric"><div class="num">8</div><div class="lbl">CRUD modülü · hepsi çok kiracılı güvenli</div></div>
       <div class="metric"><div class="num">30</div><div class="lbl">commit · bu geliştirme dalında</div></div>
     </div>
@@ -198,11 +198,14 @@
     <div class="panel">
       <h3 style="margin-top:0">Ne yaptık?</h3>
       <p>
-        Üç bağımsız inceleme ajanının bulduğu ~35 hatanın tamamı düzeltildi: yanlış troy-ons
+        Üç bağımsız inceleme ajanının bulduğu 36 bulgunun 25'i düzeltildi; kalan
+        11 açık kalem bilinçli olarak bırakıldı (4'ü tasarım kararı, 7'si küçük
+        kalıntı — ayrılar <b>Bulgular</b> ve <b>Yol Haritası</b> sekmelerinde).
+        Düzeltilenler arasında yanlış troy-ons
         sabiti (altın/gümüş gram fiyatı %9 sapmalıydı), üç farklı eurobond değerleme formülü,
         FX dönüşümü olmayan net değer toplamı, çapraz kiracı erişimi, yarış koşullu auth guard,
         atomik olmayan yazma işlemleri, doğrulanmamış sorgu parametreleri, kırık demo (mock)
-        modu, beş farklı para formatlayıcısı, bozuk dark mode ve eksik mobil navigasyon.
+        modu, beş farklı para formatlayıcısı, bozuk dark mode ve eksik mobil navigasyon var.
         Her düzeltmeye eşlik eden testlerle birlikte CI artık her push'ta lint + test + build çalıştırıyor.
       </p>
       <p>
@@ -378,8 +381,8 @@ pnpm --filter api test -- --watch   <span class="c"># jest watch modu</span></co
     <div class="panel">
       <h3 style="margin-top:0">CI Hattı — <code class="inline">.github/workflows/ci.yml</code></h3>
       <p>
-        Node 22 üzerinde iki paralel job: <b>api</b> (kurulum → prisma generate → lint → test → build)
-        ve <b>web</b> (kurulum → lint → test → build). Kök gate'i yerelde aynen tekrarlar:
+        Node 22 üzerinde iki paralel job: <b>web</b> (kurulum → prisma generate → check-types → lint → test → build)
+        ve <b>api</b> (kurulum → prisma generate → lint → test → build). Kök gate'i yerelde aynen tekrarlar:
       </p>
       <pre class="block"><code>pnpm lint &amp;&amp; pnpm check-types &amp;&amp; pnpm test &amp;&amp; pnpm build</code></pre>
       <p>Bu raporun yazıldığı dalda dördü de yeşildir: 139 + 57 = <b>196 test geçti</b>, lint sıfır uyarı politikası (<code class="inline">--max-warnings 0</code>), tip kontrolü temiz, üç uygulama da derleniyor.</p>
