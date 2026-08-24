@@ -16,8 +16,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "FinanceLens — Personal Finance Tracker",
-  description: "Track your investments, income, and expenses in one place",
+  title: "FinanceLens — Tüm Varlıkların Tek Ekranda",
+  description:
+    "Hisse, eurobond, ETF, altın ve nakit dahil tüm varlıklarını tek ekranda takip et. Net değer, gelir-gider ve vergi hesaplarıyla finansal netliğe ulaş.",
 };
 
 export default function RootLayout({
@@ -26,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" suppressHydrationWarning>
+    <html lang="tr" className="scroll-smooth" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
