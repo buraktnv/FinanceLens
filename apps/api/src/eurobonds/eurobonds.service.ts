@@ -112,8 +112,12 @@ export class EurobondsService {
       (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
       0,
     );
+    const totalCost = eurobonds.reduce(
+      (sum, e) => sum + Number(e.purchasePrice) * Number(e.quantity),
+      0,
+    );
     const totalCurrentValue = eurobonds.reduce(
-      (sum, e) => sum + (Number(e.purchasePrice) * Number(e.quantity)) / 100,
+      (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
       0,
     );
     const annualCouponIncome = eurobonds.reduce(
@@ -125,6 +129,7 @@ export class EurobondsService {
     return {
       totalBonds: eurobonds.length,
       totalFaceValue,
+      totalCost,
       totalCurrentValue,
       annualCouponIncome,
       eurobonds: eurobonds.map((e) => ({
