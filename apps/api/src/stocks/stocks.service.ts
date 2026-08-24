@@ -117,7 +117,11 @@ export class StocksService {
 
     const totalDividends = stocks.reduce((sum, stock) => {
       return (
-        sum + stock.dividends.reduce((dSum, d) => dSum + Number(d.amount), 0)
+        sum +
+        stock.dividends.reduce(
+          (dSum, d) => dSum + Number(d.amount) - Number(d.taxWithheld ?? 0),
+          0,
+        )
       );
     }, 0);
 

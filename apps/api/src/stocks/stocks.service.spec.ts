@@ -241,6 +241,28 @@ describe('StocksService', () => {
       );
     });
 
+    it('should return net dividends after withholding in the summary', async () => {
+      const stockWithTaxedDividends = {
+        ...mockStock,
+        quantity: { toString: () => '10' } as any,
+        purchasePrice: { toString: () => '150' } as any,
+        dividends: [
+          {
+            amount: { toString: () => '100' } as any,
+            taxWithheld: { toString: () => '15' } as any,
+          },
+          { amount: { toString: () => '50' } as any, taxWithheld: null },
+          { amount: { toString: () => '25' } as any },
+        ],
+      };
+
+      prismaService.stock.findMany.mockResolvedValue([stockWithTaxedDividends]);
+
+      const result = await service.getPortfolioSummary(userId);
+
+      expect(result.totalDividends).toBe(160);
+    });
+
     it('should return zeroed totals when the user has no stocks', async () => {
       prismaService.stock.findMany.mockResolvedValue([]);
 
