@@ -11,10 +11,16 @@ import {
   PageHeader,
   StatCard,
 } from "@/components/shared";
-import { dashboardApi } from "@/lib/api";
+import { dashboardApi, expensesApi } from "@/lib/api";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { AllocationDonut } from "@/components/charts/allocation-donut";
+import { CategoryBar } from "@/components/charts/category-bar";
 
 export default function DashboardPage() {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
   const {
     data: overview,
     isLoading: overviewLoading,
@@ -35,7 +41,17 @@ export default function DashboardPage() {
     queryFn: () => dashboardApi.getRecentTransactions(5),
   });
 
-  const isLoading = overviewLoading || transactionsLoading;
+  const {
+    data: expenseSummary,
+    isLoading: summaryLoading,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useQuery({
+    queryKey: ["expenses", "summary", currentYear, currentMonth],
+    queryFn: () => expensesApi.getSummary(currentMonth, currentYear),
+  });
+
+  const isLoading = overviewLoading || transactionsLoading || summaryLoading;
 
   if (isLoading) {
     return (
@@ -55,8 +71,8 @@ export default function DashboardPage() {
           ))}
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-72" />
-          <Skeleton className="h-72" />
+          <Skeleton className="h-80" />
+          <Skeleton className="h-80" />
         </div>
         <Skeleton className="h-52" />
       </div>
@@ -140,102 +156,85 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Portfolio Overview */}
+      {/* Charts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Asset Allocation</CardTitle>
-            <CardDescription className="text-sm">Distribution of your assets by category</CardDescription>
+            <CardTitle className="text-lg md:text-xl">Varlık Dağılımı</CardTitle>
+            <CardDescription className="text-sm">
+              Varlıklarınızın türlere göre dağılımı
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 md:space-y-4">
-              {overview?.breakdown && (
-                <>
-                  <PortfolioItem
-                    label="Cash"
-                    value={formatCurrency(overview.breakdown.cash?.value ?? 0)}
-                    percentage={totalAssets > 0 ? ((overview.breakdown.cash?.value ?? 0) / totalAssets) * 100 : 0}
-                    color="bg-emerald-500"
-                  />
-                  <PortfolioItem
-                    label="Gold"
-                    value={formatCurrency(overview.breakdown.gold?.value ?? 0)}
-                    percentage={totalAssets > 0 ? ((overview.breakdown.gold?.value ?? 0) / totalAssets) * 100 : 0}
-                    color="bg-amber-500"
-                  />
-                  <PortfolioItem
-                    label="Silver"
-                    value={formatCurrency(overview.breakdown.silver?.value ?? 0)}
-                    percentage={totalAssets > 0 ? ((overview.breakdown.silver?.value ?? 0) / totalAssets) * 100 : 0}
-                    color="bg-slate-400"
-                  />
-                  <PortfolioItem
-                    label="Stocks"
-                    value={formatCurrency(overview.breakdown.stocks?.value ?? 0)}
-                    percentage={totalAssets > 0 ? ((overview.breakdown.stocks?.value ?? 0) / totalAssets) * 100 : 0}
-                    color="bg-blue-500"
-                  />
-                  <PortfolioItem
-                    label="ETFs"
-                    value={formatCurrency(overview.breakdown.etfs?.value ?? 0)}
-                    percentage={totalAssets > 0 ? ((overview.breakdown.etfs?.value ?? 0) / totalAssets) * 100 : 0}
-                    color="bg-green-500"
-                  />
-                  <PortfolioItem
-                    label="Eurobonds"
-                    value={formatCurrency(overview.breakdown.eurobonds?.value ?? 0)}
-                    percentage={totalAssets > 0 ? ((overview.breakdown.eurobonds?.value ?? 0) / totalAssets) * 100 : 0}
-                    color="bg-yellow-500"
-                  />
-                </>
-              )}
-              {(!overview?.breakdown || (
-                (overview.breakdown.cash?.value ?? 0) === 0 &&
-                (overview.breakdown.gold?.value ?? 0) === 0 &&
-                (overview.breakdown.silver?.value ?? 0) === 0 &&
-                (overview.breakdown.stocks?.value ?? 0) === 0 &&
-                (overview.breakdown.etfs?.value ?? 0) === 0 &&
-                (overview.breakdown.eurobonds?.value ?? 0) === 0
-              )) && (
-                <EmptyState title="No investments added yet" />
-              )}
-            </div>
+            {overview?.breakdown ? (
+              <AllocationDonut breakdown={overview.breakdown} />
+            ) : (
+              <EmptyState title="No investments added yet" />
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Recent Transactions</CardTitle>
-            <CardDescription className="text-sm">Latest financial transactions</CardDescription>
+            <CardTitle className="text-lg md:text-xl">
+              Harcama Kategorileri
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Bu ay harcamalarınız nereye gitti?
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 md:space-y-4">
-              {transactionsError ? (
-                <ErrorState
-                  message={
-                    transactionsError instanceof Error
-                      ? transactionsError.message
-                      : undefined
-                  }
-                  onRetry={() => refetchTransactions()}
-                />
-              ) : transactions.length > 0 ? (
-                transactions.map((tx) => (
-                  <TransactionItem
-                    key={tx.id}
-                    title={tx.description || tx.category}
-                    date={formatDate(tx.date)}
-                    amount={`${tx.type === "income" ? "+" : "-"}${formatCurrency(tx.amount, tx.currency)}`}
-                    type={tx.type === "income" ? "income" : "expense"}
-                  />
-                ))
-              ) : (
-                <EmptyState title="No transactions yet" />
-              )}
-            </div>
+            {summaryError ? (
+              <ErrorState
+                message={
+                  summaryError instanceof Error
+                    ? summaryError.message
+                    : undefined
+                }
+                onRetry={() => refetchSummary()}
+              />
+            ) : summaryLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <CategoryBar byCategory={expenseSummary?.byCategory ?? {}} />
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg md:text-xl">Recent Transactions</CardTitle>
+          <CardDescription className="text-sm">Latest financial transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 md:space-y-4">
+            {transactionsError ? (
+              <ErrorState
+                message={
+                  transactionsError instanceof Error
+                    ? transactionsError.message
+                    : undefined
+                }
+                onRetry={() => refetchTransactions()}
+              />
+            ) : transactions.length > 0 ? (
+              transactions.map((tx) => (
+                <TransactionItem
+                  key={tx.id}
+                  title={tx.description || tx.category}
+                  date={formatDate(tx.date)}
+                  amount={`${tx.type === "income" ? "+" : "-"}${formatCurrency(tx.amount, tx.currency)}`}
+                  type={tx.type === "income" ? "income" : "expense"}
+                />
+              ))
+            ) : (
+              <EmptyState title="No transactions yet" />
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Savings Projection */}
       <Card>
@@ -292,30 +291,6 @@ function QuickActionCard({
         </CardContent>
       </Card>
     </Link>
-  );
-}
-
-function PortfolioItem({
-  label,
-  value,
-  percentage,
-  color,
-}: {
-  label: string;
-  value: string;
-  percentage: number;
-  color: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs md:text-sm">{label}</span>
-        <span className="text-xs md:text-sm font-medium tabular-nums">{value}</span>
-      </div>
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(percentage, 100)}%` }} />
-      </div>
-    </div>
   );
 }
 

@@ -43,42 +43,8 @@ import {
   TableSkeleton,
 } from "@/components/shared";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { expenseCategories } from "@/lib/labels";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const expenseCategories: Record<string, { label: string; color: string }> = {
-  RENT: { label: "Rent", color: "bg-red-500/15 text-red-600 dark:text-red-400" },
-  MORTGAGE_PAYMENT: { label: "Mortgage", color: "bg-red-500/15 text-red-600 dark:text-red-400" },
-  UTILITIES: { label: "Utilities", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  INTERNET: { label: "Internet", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  PHONE: { label: "Phone", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  MAINTENANCE: { label: "Maintenance", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  INSURANCE: { label: "Insurance", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  HOA_FEE: { label: "HOA Fee", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  PROPERTY_TAX: { label: "Property Tax", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
-  GROCERIES: { label: "Groceries", color: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
-  TRANSPORTATION: { label: "Transportation", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  FUEL: { label: "Fuel", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  CAR_PAYMENT: { label: "Car Payment", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  CAR_INSURANCE: { label: "Car Insurance", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  CAR_MAINTENANCE: { label: "Car Maintenance", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  PARKING: { label: "Parking", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  DINING: { label: "Dining", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-  COFFEE: { label: "Coffee", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-  ENTERTAINMENT: { label: "Entertainment", color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
-  HEALTHCARE: { label: "Healthcare", color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
-  EDUCATION: { label: "Education", color: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" },
-  SHOPPING: { label: "Shopping", color: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" },
-  CLOTHING: { label: "Clothing", color: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400" },
-  PERSONAL_CARE: { label: "Personal Care", color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
-  GYM: { label: "Gym", color: "bg-lime-500/15 text-lime-600 dark:text-lime-400" },
-  SUBSCRIPTIONS: { label: "Subscriptions", color: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400" },
-  TRAVEL: { label: "Travel", color: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
-  GIFTS: { label: "Gifts", color: "bg-rose-500/15 text-rose-600 dark:text-rose-400" },
-  DONATIONS: { label: "Donations", color: "bg-rose-500/15 text-rose-600 dark:text-rose-400" },
-  TAXES: { label: "Taxes", color: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
-  FEES: { label: "Fees", color: "bg-slate-500/15 text-slate-600 dark:text-slate-400" },
-  OTHER: { label: "Other", color: "bg-muted text-muted-foreground" },
-};
 
 const paymentMethodLabels: Record<string, string> = {
   CASH: "Cash",
