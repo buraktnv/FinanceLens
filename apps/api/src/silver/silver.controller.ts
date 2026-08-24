@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SilverService } from './silver.service';
@@ -38,7 +39,10 @@ export class SilverController {
   }
 
   @Get(':id')
-  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async findOne(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const silver = await this.silverService.findOne(userId, id);
     if (!silver) {
       throw new NotFoundException('Silver holding not found');
@@ -49,14 +53,17 @@ export class SilverController {
   @Patch(':id')
   update(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateSilverDto: UpdateSilverDto,
   ) {
     return this.silverService.update(userId, id, updateSilverDto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.silverService.remove(userId, id);
     return { message: 'Silver holding deleted successfully' };
   }

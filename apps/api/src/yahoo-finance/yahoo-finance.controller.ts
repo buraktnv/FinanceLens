@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { YahooFinanceService } from './yahoo-finance.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -26,14 +33,14 @@ export class YahooFinanceController {
   @Get('historical/:symbol')
   async getHistorical(
     @Param('symbol') symbol: string,
-    @Query('period1') period1: string,
-    @Query('period2') period2: string,
+    @Query('period1', ParseIntPipe) period1: number,
+    @Query('period2', ParseIntPipe) period2: number,
     @Query('interval') interval?: string,
   ) {
     return this.yahooFinanceService.getHistoricalData(
       symbol,
-      parseInt(period1),
-      parseInt(period2),
+      period1,
+      period2,
       interval || '1d',
     );
   }

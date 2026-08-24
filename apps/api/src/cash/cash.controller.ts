@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CashService } from './cash.service';
@@ -38,7 +39,10 @@ export class CashController {
   }
 
   @Get(':id')
-  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async findOne(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const cash = await this.cashService.findOne(userId, id);
     if (!cash) {
       throw new NotFoundException('Cash account not found');
@@ -49,14 +53,17 @@ export class CashController {
   @Patch(':id')
   update(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCashDto: UpdateCashDto,
   ) {
     return this.cashService.update(userId, id, updateCashDto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.cashService.remove(userId, id);
     return { message: 'Cash account deleted successfully' };
   }

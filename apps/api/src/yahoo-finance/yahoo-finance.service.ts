@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   HttpException,
   HttpStatus,
   ServiceUnavailableException,
@@ -44,6 +45,25 @@ export class YahooFinanceService {
   private static readonly FX_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
   private readonly baseUrl = 'https://query1.finance.yahoo.com';
+
+  private static readonly ALLOWED_INTERVALS = ['1d', '1wk', '1mo'] as const;
+
+  /**
+   * Whitelist the chart interval before it is interpolated into the upstream
+   * URL, so arbitrary/path-like values can never reach Yahoo Finance.
+   */
+  private assertValidInterval(interval: string): string {
+    if (
+      !YahooFinanceService.ALLOWED_INTERVALS.includes(
+        interval as (typeof YahooFinanceService.ALLOWED_INTERVALS)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `Invalid interval '${interval}'. Allowed values: ${YahooFinanceService.ALLOWED_INTERVALS.join(', ')}`,
+      );
+    }
+    return interval;
+  }
 
   /**
    * Search for stocks/ETFs by symbol or name
@@ -108,17 +128,18 @@ export class YahooFinanceService {
 
       const result = data.chart.result[0];
       const meta = result.meta;
-      const quote = result.indicators?.quote?.[0];
+      const price = Number(meta.regularMarketPrice ?? 0);
+      const previousClose = Number(meta.previousClose ?? 0);
 
       return {
         symbol: meta.symbol,
         name: meta.longName || meta.symbol,
-        regularMarketPrice: meta.regularMarketPrice,
-        regularMarketChange: meta.regularMarketPrice - meta.previousClose,
+        regularMarketPrice: price,
+        regularMarketChange: price - previousClose,
         regularMarketChangePercent:
-          ((meta.regularMarketPrice - meta.previousClose) /
-            meta.previousClose) *
-          100,
+          previousClose > 0
+            ? ((price - previousClose) / previousClose) * 100
+            : 0,
         currency: meta.currency,
         marketState: meta.marketState,
       };
@@ -189,8 +210,10 @@ export class YahooFinanceService {
     period2: number,
     interval: string = '1d',
   ): Promise<any> {
+    const safeInterval = this.assertValidInterval(interval);
+
     try {
-      const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${interval}&includePrePost=true&events=div%7Csplit%7Cearn`;
+      const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${encodeURIComponent(safeInterval)}&includePrePost=true&events=div%7Csplit%7Cearn`;
 
       const response = await fetch(url);
 

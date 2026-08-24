@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIncomeDto, UpdateIncomeDto } from './dto';
-import { Prisma } from '@prisma/client';
+import { IncomeType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class IncomesService {
@@ -43,7 +43,7 @@ export class IncomesService {
 
   async findAll(
     userId: string,
-    filters?: { type?: string; startDate?: string; endDate?: string },
+    filters?: { type?: IncomeType; startDate?: string; endDate?: string },
   ) {
     const where: any = { userId };
 

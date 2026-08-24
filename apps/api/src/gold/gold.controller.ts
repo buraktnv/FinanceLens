@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { GoldService } from './gold.service';
@@ -38,7 +39,10 @@ export class GoldController {
   }
 
   @Get(':id')
-  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async findOne(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const gold = await this.goldService.findOne(userId, id);
     if (!gold) {
       throw new NotFoundException('Gold holding not found');
@@ -49,14 +53,17 @@ export class GoldController {
   @Patch(':id')
   update(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateGoldDto: UpdateGoldDto,
   ) {
     return this.goldService.update(userId, id, updateGoldDto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     await this.goldService.remove(userId, id);
     return { message: 'Gold holding deleted successfully' };
   }
