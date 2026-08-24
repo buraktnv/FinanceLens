@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session, SupabaseClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { createClient } from './supabase/client';
+import { parseDemoUser } from './demo-user';
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +12,11 @@ interface AuthContextType {
   loading: boolean;
   isDemo: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    name?: string
+  ) => Promise<{ error: Error | null; session: Session | null }>;
   signInAsDemo: () => void;
   signOut: () => Promise<void>;
 }
@@ -62,12 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check for demo user in localStorage first
     if (typeof window !== 'undefined') {
-      const demoUser = window.localStorage.getItem(DEMO_USER_KEY);
+      const rawDemoUser = window.localStorage.getItem(DEMO_USER_KEY);
+      const demoUser = parseDemoUser(rawDemoUser);
       if (demoUser) {
-        setUser(JSON.parse(demoUser));
+        setUser(demoUser);
         setIsDemo(true);
         setLoading(false);
         return;
+      }
+      if (rawDemoUser) {
+        // Corrupted value: treat as logged out and clear it
+        window.localStorage.removeItem(DEMO_USER_KEY);
       }
     }
 
@@ -96,6 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Navigation is owned by callers: they route explicitly after awaiting
+  // signIn/signUp. signInAsDemo keeps its own routing (demo mode has no
+  // server session to guard).
   const signIn = async (email: string, password: string) => {
     const supabase = getClient();
     if (!supabase) {
@@ -105,19 +118,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
-    if (!error) {
-      router.push('/dashboard');
-      router.refresh();
-    }
     return { error };
   };
 
   const signUp = async (email: string, password: string, name?: string) => {
     const supabase = getClient();
     if (!supabase) {
-      return { error: new Error('Supabase is not configured. Please check your environment variables.') };
+      return { error: new Error('Supabase is not configured. Please check your environment variables.'), session: null };
     }
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -126,11 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
-    if (!error) {
-      router.push('/dashboard');
-      router.refresh();
-    }
-    return { error };
+    // When email confirmation is required, signUp succeeds without a session;
+    // callers must route to /login?message=confirm-email in that case.
+    return { error, session: data?.session ?? null };
   };
 
   const signInAsDemo = () => {

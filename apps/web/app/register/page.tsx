@@ -39,11 +39,16 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { error } = await signUp(email, password, name);
+      const { error, session } = await signUp(email, password, name);
       if (error) {
         setError(error.message);
-      } else {
+      } else if (session) {
         router.push("/dashboard");
+        router.refresh();
+      } else {
+        // Email confirmation required: no session yet, middleware would
+        // bounce /dashboard. Send to login with a notice instead.
+        router.push("/login?message=confirm-email");
         router.refresh();
       }
     } catch {
