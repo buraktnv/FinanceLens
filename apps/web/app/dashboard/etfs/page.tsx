@@ -63,6 +63,10 @@ export default function ETFsPage() {
       toast.success("ETF deleted successfully");
       setDeletingEtf(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingEtf(null);
+    },
   });
 
   const handleDelete = () => {
