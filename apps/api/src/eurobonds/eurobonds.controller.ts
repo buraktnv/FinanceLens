@@ -42,20 +42,17 @@ export class EurobondsController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateEurobondDto,
   ) {
-    const eurobond = await this.eurobondsService.update(userId, id, dto);
-    if (!eurobond) throw new NotFoundException('Eurobond not found');
-    return eurobond;
+    return this.eurobondsService.update(userId, id, dto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const eurobond = await this.eurobondsService.remove(userId, id);
-    if (!eurobond) throw new NotFoundException('Eurobond not found');
+    await this.eurobondsService.remove(userId, id);
     return { message: 'Eurobond deleted successfully' };
   }
 }

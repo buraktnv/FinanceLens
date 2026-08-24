@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEurobondDto, UpdateEurobondDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -54,14 +54,8 @@ export class EurobondsService {
   }
 
   async update(userId: string, id: string, dto: UpdateEurobondDto) {
-    const eurobond = await this.prisma.eurobond.findFirst({
+    const updated = await this.prisma.eurobond.updateMany({
       where: { id, userId },
-    });
-
-    if (!eurobond) return null;
-
-    return this.prisma.eurobond.update({
-      where: { id },
       data: {
         ...(dto.name && { name: dto.name }),
         ...(dto.isin !== undefined && { isin: dto.isin }),
@@ -86,20 +80,20 @@ export class EurobondsService {
         ...(dto.broker !== undefined && { broker: dto.broker }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
-      include: {
-        couponPayments: true,
-      },
+    });
+    if (updated.count === 0) throw new NotFoundException('Eurobond not found');
+
+    return this.prisma.eurobond.findUnique({
+      where: { id },
+      include: { couponPayments: true },
     });
   }
 
-  async remove(userId: string, id: string) {
-    const eurobond = await this.prisma.eurobond.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.eurobond.deleteMany({
       where: { id, userId },
     });
-
-    if (!eurobond) return null;
-
-    return this.prisma.eurobond.delete({ where: { id } });
+    if (result.count === 0) throw new NotFoundException('Eurobond not found');
   }
 
   async getPortfolioSummary(userId: string) {

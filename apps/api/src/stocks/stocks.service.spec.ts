@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { StocksService } from './stocks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockDto, UpdateStockDto } from './dto';
@@ -9,9 +10,12 @@ describe('StocksService', () => {
     stock: {
       findMany: jest.Mock;
       findFirst: jest.Mock;
+      findUnique: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       delete: jest.Mock;
+      deleteMany: jest.Mock;
     };
   };
 
@@ -39,9 +43,12 @@ describe('StocksService', () => {
       stock: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn(),
       },
     };
 
@@ -146,63 +153,72 @@ describe('StocksService', () => {
       quantity: 15,
     };
 
-    it('should update the stock when it is owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(mockStock);
-      prismaService.stock.update.mockResolvedValue({
+    it('should update the stock atomically when it is owned by the user', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.stock.findUnique.mockResolvedValue({
         ...mockStock,
         name: 'Apple Inc. Updated',
       });
 
       const result = await service.update(userId, stockId, updateStockDto);
 
-      expect(prismaService.stock.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.stock.updateMany).toHaveBeenCalledWith({
         where: { id: stockId, userId },
-      });
-      expect(prismaService.stock.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: stockId },
-          data: expect.objectContaining({
-            name: 'Apple Inc. Updated',
-          }),
-          include: { dividends: true },
+        data: expect.objectContaining({
+          name: 'Apple Inc. Updated',
         }),
-      );
+      });
+      expect(prismaService.stock.findUnique).toHaveBeenCalledWith({
+        where: { id: stockId },
+        include: { dividends: true },
+      });
       expect(result).toEqual({ ...mockStock, name: 'Apple Inc. Updated' });
     });
 
-    it('should return null when the stock is not owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException when the stock is not owned by the user', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.update(userId, stockId, updateStockDto);
+      await expect(
+        service.update(userId, stockId, updateStockDto),
+      ).rejects.toThrow(NotFoundException);
+      expect(prismaService.stock.findUnique).not.toHaveBeenCalled();
+    });
 
-      expect(prismaService.stock.update).not.toHaveBeenCalled();
-      expect(result).toBeNull();
+    it('should throw NotFoundException when the stock does not exist', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.update(userId, 'missing-id', updateStockDto),
+      ).rejects.toThrow(new NotFoundException('Stock not found'));
     });
   });
 
   describe('remove', () => {
-    it('should delete the stock when it is owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(mockStock);
-      prismaService.stock.delete.mockResolvedValue(mockStock);
+    it('should delete the stock atomically when it is owned by the user', async () => {
+      prismaService.stock.deleteMany.mockResolvedValue({ count: 1 });
 
       const result = await service.remove(userId, stockId);
 
-      expect(prismaService.stock.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.stock.deleteMany).toHaveBeenCalledWith({
         where: { id: stockId, userId },
       });
-      expect(prismaService.stock.delete).toHaveBeenCalledWith({
-        where: { id: stockId },
-      });
-      expect(result).toEqual(mockStock);
+      expect(result).toBeUndefined();
     });
 
-    it('should return null when the stock is not owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException when the stock is not owned by the user', async () => {
+      prismaService.stock.deleteMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.remove(userId, stockId);
+      await expect(service.remove(userId, stockId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
 
-      expect(prismaService.stock.delete).not.toHaveBeenCalled();
-      expect(result).toBeNull();
+    it('should throw NotFoundException when the stock does not exist', async () => {
+      prismaService.stock.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.remove(userId, 'missing-id')).rejects.toThrow(
+        new NotFoundException('Stock not found'),
+      );
     });
   });
 

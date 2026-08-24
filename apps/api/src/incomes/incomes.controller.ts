@@ -56,20 +56,17 @@ export class IncomesController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateIncomeDto,
   ) {
-    const income = await this.incomesService.update(userId, id, dto);
-    if (!income) throw new NotFoundException('Income not found');
-    return income;
+    return this.incomesService.update(userId, id, dto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const income = await this.incomesService.remove(userId, id);
-    if (!income) throw new NotFoundException('Income not found');
+    await this.incomesService.remove(userId, id);
     return { message: 'Income deleted successfully' };
   }
 }

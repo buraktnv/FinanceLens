@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { EurobondsService } from './eurobonds.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -8,9 +9,12 @@ describe('EurobondsService', () => {
     eurobond: {
       findMany: jest.Mock;
       findFirst: jest.Mock;
+      findUnique: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       delete: jest.Mock;
+      deleteMany: jest.Mock;
     };
   };
 
@@ -49,9 +53,12 @@ describe('EurobondsService', () => {
       eurobond: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn(),
       },
     };
 
@@ -142,6 +149,73 @@ describe('EurobondsService', () => {
       expect(result.totalCurrentValue).toBe(0);
       expect(result.annualCouponIncome).toBe(0);
       expect(result.totalCost).toBeCloseTo(900 * 5, 6);
+    });
+  });
+
+  describe('update', () => {
+    const updateDto = { name: 'US TREASURY 2031' };
+
+    it('should update the bond atomically when it is owned by the user', async () => {
+      prismaService.eurobond.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.eurobond.findUnique.mockResolvedValue({
+        ...bond({
+          faceValue: '1000',
+          purchasePrice: '980',
+          quantity: '10',
+          couponRate: '0.0525',
+        }),
+        name: 'US TREASURY 2031',
+      });
+
+      const result = await service.update(userId, 'bond-1', updateDto);
+
+      expect(prismaService.eurobond.updateMany).toHaveBeenCalledWith({
+        where: { id: 'bond-1', userId },
+        data: { name: 'US TREASURY 2031' },
+      });
+      expect(prismaService.eurobond.findUnique).toHaveBeenCalledWith({
+        where: { id: 'bond-1' },
+        include: { couponPayments: true },
+      });
+      expect(result.name).toBe('US TREASURY 2031');
+    });
+
+    it('should throw NotFoundException when the bond is not owned by the user', async () => {
+      prismaService.eurobond.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.update(userId, 'foreign-bond', updateDto),
+      ).rejects.toThrow(NotFoundException);
+      expect(prismaService.eurobond.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when the bond does not exist', async () => {
+      prismaService.eurobond.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.update(userId, 'missing-bond', updateDto),
+      ).rejects.toThrow(new NotFoundException('Eurobond not found'));
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete the bond atomically when it is owned by the user', async () => {
+      prismaService.eurobond.deleteMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.remove(userId, 'bond-1');
+
+      expect(prismaService.eurobond.deleteMany).toHaveBeenCalledWith({
+        where: { id: 'bond-1', userId },
+      });
+      expect(result).toBeUndefined();
+    });
+
+    it('should throw NotFoundException when the bond is not owned by the user', async () => {
+      prismaService.eurobond.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.remove(userId, 'foreign-bond')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

@@ -42,20 +42,17 @@ export class EtfsController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateEtfDto,
   ) {
-    const etf = await this.etfsService.update(userId, id, dto);
-    if (!etf) throw new NotFoundException('ETF not found');
-    return etf;
+    return this.etfsService.update(userId, id, dto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const etf = await this.etfsService.remove(userId, id);
-    if (!etf) throw new NotFoundException('ETF not found');
+    await this.etfsService.remove(userId, id);
     return { message: 'ETF deleted successfully' };
   }
 }

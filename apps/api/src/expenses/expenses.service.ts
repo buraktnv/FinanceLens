@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpenseDto, UpdateExpenseDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -7,7 +11,17 @@ import { Prisma } from '@prisma/client';
 export class ExpensesService {
   constructor(private prisma: PrismaService) {}
 
+  private async assertPropertyOwnership(userId: string, propertyId?: string) {
+    if (!propertyId) return;
+    const property = await this.prisma.property.findFirst({
+      where: { id: propertyId, userId },
+    });
+    if (!property) throw new BadRequestException('Invalid property');
+  }
+
   async create(userId: string, dto: CreateExpenseDto) {
+    await this.assertPropertyOwnership(userId, dto.propertyId);
+
     return this.prisma.expense.create({
       data: {
         userId,
@@ -62,13 +76,10 @@ export class ExpensesService {
   }
 
   async update(userId: string, id: string, dto: UpdateExpenseDto) {
-    const expense = await this.prisma.expense.findFirst({
-      where: { id, userId },
-    });
-    if (!expense) return null;
+    await this.assertPropertyOwnership(userId, dto.propertyId);
 
-    return this.prisma.expense.update({
-      where: { id },
+    const updated = await this.prisma.expense.updateMany({
+      where: { id, userId },
       data: {
         ...(dto.amount !== undefined && {
           amount: new Prisma.Decimal(dto.amount),
@@ -85,16 +96,20 @@ export class ExpensesService {
         ...(dto.propertyId !== undefined && { propertyId: dto.propertyId }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
+    });
+    if (updated.count === 0) throw new NotFoundException('Expense not found');
+
+    return this.prisma.expense.findUnique({
+      where: { id },
       include: { property: true },
     });
   }
 
-  async remove(userId: string, id: string) {
-    const expense = await this.prisma.expense.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.expense.deleteMany({
       where: { id, userId },
     });
-    if (!expense) return null;
-    return this.prisma.expense.delete({ where: { id } });
+    if (result.count === 0) throw new NotFoundException('Expense not found');
   }
 
   async getSummary(userId: string, month?: number, year?: number) {

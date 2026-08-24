@@ -47,24 +47,17 @@ export class SilverController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() updateSilverDto: UpdateSilverDto,
   ) {
-    const silver = await this.silverService.update(userId, id, updateSilverDto);
-    if (!silver) {
-      throw new NotFoundException('Silver holding not found');
-    }
-    return silver;
+    return this.silverService.update(userId, id, updateSilverDto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const silver = await this.silverService.remove(userId, id);
-    if (!silver) {
-      throw new NotFoundException('Silver holding not found');
-    }
+    await this.silverService.remove(userId, id);
     return { message: 'Silver holding deleted successfully' };
   }
 }

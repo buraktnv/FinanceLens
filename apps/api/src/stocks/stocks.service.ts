@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockDto, UpdateStockDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -50,17 +50,8 @@ export class StocksService {
   }
 
   async update(userId: string, id: string, updateStockDto: UpdateStockDto) {
-    // First verify ownership
-    const stock = await this.prisma.stock.findFirst({
+    const updated = await this.prisma.stock.updateMany({
       where: { id, userId },
-    });
-
-    if (!stock) {
-      return null;
-    }
-
-    return this.prisma.stock.update({
-      where: { id },
       data: {
         ...(updateStockDto.symbol && { symbol: updateStockDto.symbol }),
         ...(updateStockDto.name && { name: updateStockDto.name }),
@@ -81,25 +72,20 @@ export class StocksService {
           notes: updateStockDto.notes,
         }),
       },
-      include: {
-        dividends: true,
-      },
+    });
+    if (updated.count === 0) throw new NotFoundException('Stock not found');
+
+    return this.prisma.stock.findUnique({
+      where: { id },
+      include: { dividends: true },
     });
   }
 
-  async remove(userId: string, id: string) {
-    // First verify ownership
-    const stock = await this.prisma.stock.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.stock.deleteMany({
       where: { id, userId },
     });
-
-    if (!stock) {
-      return null;
-    }
-
-    return this.prisma.stock.delete({
-      where: { id },
-    });
+    if (result.count === 0) throw new NotFoundException('Stock not found');
   }
 
   // Get portfolio summary

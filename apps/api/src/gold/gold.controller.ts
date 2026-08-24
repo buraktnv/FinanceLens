@@ -47,24 +47,17 @@ export class GoldController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() updateGoldDto: UpdateGoldDto,
   ) {
-    const gold = await this.goldService.update(userId, id, updateGoldDto);
-    if (!gold) {
-      throw new NotFoundException('Gold holding not found');
-    }
-    return gold;
+    return this.goldService.update(userId, id, updateGoldDto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const gold = await this.goldService.remove(userId, id);
-    if (!gold) {
-      throw new NotFoundException('Gold holding not found');
-    }
+    await this.goldService.remove(userId, id);
     return { message: 'Gold holding deleted successfully' };
   }
 }

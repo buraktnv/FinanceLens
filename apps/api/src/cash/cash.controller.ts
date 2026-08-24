@@ -47,24 +47,17 @@ export class CashController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() updateCashDto: UpdateCashDto,
   ) {
-    const cash = await this.cashService.update(userId, id, updateCashDto);
-    if (!cash) {
-      throw new NotFoundException('Cash account not found');
-    }
-    return cash;
+    return this.cashService.update(userId, id, updateCashDto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const cash = await this.cashService.remove(userId, id);
-    if (!cash) {
-      throw new NotFoundException('Cash account not found');
-    }
+    await this.cashService.remove(userId, id);
     return { message: 'Cash account deleted successfully' };
   }
 }

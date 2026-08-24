@@ -62,20 +62,17 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateExpenseDto,
   ) {
-    const expense = await this.expensesService.update(userId, id, dto);
-    if (!expense) throw new NotFoundException('Expense not found');
-    return expense;
+    return this.expensesService.update(userId, id, dto);
   }
 
   @Delete(':id')
   async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const expense = await this.expensesService.remove(userId, id);
-    if (!expense) throw new NotFoundException('Expense not found');
+    await this.expensesService.remove(userId, id);
     return { message: 'Expense deleted successfully' };
   }
 }
