@@ -38,16 +38,16 @@ import { EditIncomeForm } from "@/components/forms/edit-income-form";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 const incomeTypes: Record<string, { label: string; color: string }> = {
-  SALARY: { label: "Salary", color: "bg-blue-100 text-blue-800" },
-  RENTAL: { label: "Rental", color: "bg-green-100 text-green-800" },
-  DIVIDEND: { label: "Dividend", color: "bg-purple-100 text-purple-800" },
-  INTEREST: { label: "Interest", color: "bg-yellow-100 text-yellow-800" },
-  FREELANCE: { label: "Freelance", color: "bg-orange-100 text-orange-800" },
-  BONUS: { label: "Bonus", color: "bg-pink-100 text-pink-800" },
-  GIFT: { label: "Gift", color: "bg-teal-100 text-teal-800" },
-  REFUND: { label: "Refund", color: "bg-cyan-100 text-cyan-800" },
-  SALE: { label: "Sale", color: "bg-lime-100 text-lime-800" },
-  OTHER: { label: "Other", color: "bg-gray-100 text-gray-800" },
+  SALARY: { label: "Salary", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
+  RENTAL: { label: "Rental", color: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
+  DIVIDEND: { label: "Dividend", color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
+  INTEREST: { label: "Interest", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  FREELANCE: { label: "Freelance", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
+  BONUS: { label: "Bonus", color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
+  GIFT: { label: "Gift", color: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
+  REFUND: { label: "Refund", color: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400" },
+  SALE: { label: "Sale", color: "bg-lime-500/15 text-lime-600 dark:text-lime-400" },
+  OTHER: { label: "Other", color: "bg-muted text-muted-foreground" },
 };
 
 const frequencyLabels: Record<string, string> = {
@@ -240,6 +240,7 @@ export default function IncomesPage() {
                             size="icon"
                             onClick={() => setEditingIncome(income)}
                             title="Edit"
+                            aria-label="Edit income"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -249,7 +250,8 @@ export default function IncomesPage() {
                             size="icon"
                             onClick={() => setDeletingIncome(income)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 h-8 w-8"
+                            aria-label="Delete income"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -339,7 +341,7 @@ export default function IncomesPage() {
 function IncomeTypeCard({ type, amount }: { type: string; amount: number }) {
   const typeInfo = incomeTypes[type] ?? incomeTypes.OTHER!;
   return (
-    <div className="p-4 bg-gray-50 rounded-lg text-center">
+    <div className="p-4 bg-muted/30 rounded-lg text-center">
       <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
       <p className="text-lg sm:text-xl font-bold mt-2">{formatCurrency(amount)}</p>
     </div>

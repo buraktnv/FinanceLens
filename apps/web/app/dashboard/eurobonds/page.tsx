@@ -207,6 +207,7 @@ export default function EurobondsPage() {
                             size="icon"
                             onClick={() => setEditingEurobond(bond)}
                             title="Edit"
+                            aria-label="Edit eurobond"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -216,7 +217,8 @@ export default function EurobondsPage() {
                             size="icon"
                             onClick={() => setDeletingEurobond(bond)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                            aria-label="Delete eurobond"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -333,7 +335,7 @@ export default function EurobondsPage() {
 
 function CouponItem({ bond, date, amount }: { bond: string; date: string; amount: string }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
       <div>
         <p className="font-medium">{bond}</p>
         <p className="text-sm text-muted-foreground">{date}</p>

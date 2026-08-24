@@ -124,41 +124,43 @@ export function StockChart({ symbol, name, currency }: StockChartProps) {
         ) : (
           <ResponsiveContainer width="100%" height={450}>
             <LineChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 11 }}
                 angle={-45}
                 textAnchor="end"
                 height={80}
-                stroke="#666"
+                stroke="var(--muted-foreground)"
               />
               <YAxis
                 domain={yAxisDomain}
                 tick={{ fontSize: 11 }}
                 tickFormatter={(value) => `${currencySymbol}${value.toFixed(2)}`}
-                stroke="#666"
+                stroke="var(--muted-foreground)"
                 width={80}
                 tickCount={8}
               />
               <Tooltip
                 formatter={(value: number) => [`${currencySymbol}${value.toFixed(2)}`, "Fiyat"]}
-                labelStyle={{ color: "#000" }}
+                labelStyle={{ color: "var(--foreground)" }}
+                itemStyle={{ color: "var(--popover-foreground)" }}
                 contentStyle={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
+                  backgroundColor: "var(--popover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  color: "var(--popover-foreground)",
                 }}
               />
-              <Legend wrapperStyle={{ paddingTop: "10px" }} />
+              <Legend wrapperStyle={{ paddingTop: "10px", color: "var(--foreground)" }} />
               <Line
                 type="monotone"
                 dataKey="price"
-                stroke="#2563eb"
+                stroke="var(--primary)"
                 strokeWidth={2.5}
                 dot={false}
                 name="Fiyat"
-                activeDot={{ r: 6 }}
+                activeDot={{ r: 6, fill: "var(--primary)" }}
               />
             </LineChart>
           </ResponsiveContainer>

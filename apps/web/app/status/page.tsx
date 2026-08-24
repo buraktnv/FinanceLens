@@ -78,7 +78,7 @@ export default function StatusPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-4">
               <Link href="/dashboard">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label="Back to dashboard">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
               </Link>
@@ -121,17 +121,17 @@ export default function StatusPage() {
 
             {/* Key Financial Metrics */}
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-blue-500/20 bg-blue-500/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Savings Last</p>
                 <p className="text-2xl sm:text-3xl font-bold text-blue-600">{monthsOfSavings} Months</p>
                 <p className="text-xs text-muted-foreground">At {formatCurrency(monthlyExpenses)}/mo expenses</p>
               </div>
-              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Monthly Savings</p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(monthlySavings)}</p>
                 <p className="text-xs text-muted-foreground">{formatPercent(savingsRate)} of income</p>
               </div>
-              <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-lg">
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-purple-500/20 bg-purple-500/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Save Rate</p>
                 <p className="text-2xl sm:text-3xl font-bold text-purple-600">{formatPercent(savingsRate)}</p>
                 <p className="text-xs text-muted-foreground">{formatCurrency(monthlyIncome)}/mo income</p>
@@ -298,10 +298,10 @@ function LiabilityCard({
   items: { label: string; value: string; extra?: string }[];
 }) {
   return (
-    <Card className="border-red-200">
+    <Card className="border-red-500/30">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg text-red-600">{icon}</div>
+          <div className="p-1.5 sm:p-2 bg-red-500/15 rounded-lg text-red-600 dark:text-red-400">{icon}</div>
           <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
         </div>
       </CardHeader>
@@ -343,7 +343,7 @@ function SummaryItem({
   };
 
   return (
-    <div className="text-center p-3 sm:p-4 bg-gray-100 rounded-lg">
+    <div className="text-center p-3 sm:p-4 bg-muted/30 rounded-lg">
       <p className="text-xs sm:text-sm text-muted-foreground">{label}</p>
       <p className={`text-lg sm:text-2xl font-bold ${colors[type]}`}>{value}</p>
     </div>
@@ -368,7 +368,7 @@ function CashFlowItem({
         <span className="font-medium">{value}</span>
       </div>
       <div className="flex items-center gap-2">
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex-1">
+        <div className="h-2 bg-muted rounded-full overflow-hidden flex-1">
           <div className={`h-full ${color} rounded-full`} style={{ width: `${percentage}%` }} />
         </div>
         <span className="text-xs text-muted-foreground w-10 text-right">{formatPercent(percentage)}</span>

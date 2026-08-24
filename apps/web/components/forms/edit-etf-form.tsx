@@ -61,7 +61,6 @@ export function EditETFForm({ etf, onSuccess, onCancel }: EditETFFormProps) {
             onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
             required
             disabled
-            className="bg-gray-100"
           />
           <p className="text-xs text-muted-foreground mt-1">Sembol degistirilemez</p>
         </div>

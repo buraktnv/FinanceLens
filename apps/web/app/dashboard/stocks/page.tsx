@@ -192,6 +192,7 @@ export default function StocksPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search stocks..."
+            aria-label="Search stocks"
             className="pl-10 text-sm sm:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -271,6 +272,7 @@ export default function StocksPage() {
                             size="icon"
                             onClick={() => setChartStock(stock)}
                             title="Chart"
+                            aria-label="Show chart"
                             className="h-8 w-8"
                           >
                             <BarChart3 className="h-4 w-4" />
@@ -280,6 +282,7 @@ export default function StocksPage() {
                             size="icon"
                             onClick={() => setEditingStock(stock)}
                             title="Edit"
+                            aria-label="Edit stock"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -289,7 +292,8 @@ export default function StocksPage() {
                             size="icon"
                             onClick={() => setDeletingStock(stock)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                            aria-label="Delete stock"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

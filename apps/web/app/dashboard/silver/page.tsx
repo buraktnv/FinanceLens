@@ -269,6 +269,7 @@ export default function SilverPage() {
                             size="icon"
                             onClick={() => setEditingSilver(silver)}
                             title="Edit"
+                            aria-label="Edit silver holding"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -278,7 +279,8 @@ export default function SilverPage() {
                             size="icon"
                             onClick={() => setDeletingSilver(silver)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 h-8 w-8"
+                            aria-label="Delete silver holding"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

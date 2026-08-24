@@ -18,6 +18,8 @@ export function SymbolSearch({ onSelect, label = "Sembol Ara", placeholder = "AA
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const listId = "symbol-search-listbox";
 
   // Debounce search query
   useEffect(() => {
@@ -34,6 +36,11 @@ export function SymbolSearch({ onSelect, label = "Sembol Ara", placeholder = "AA
     enabled: debouncedQuery.length > 0,
   });
 
+  // Reset active highlight when the result set changes
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [debouncedQuery, results.length]);
+
   const handleSelect = async (result: YahooSearchResult) => {
     try {
       // Fetch current price
@@ -44,26 +51,63 @@ export function SymbolSearch({ onSelect, label = "Sembol Ara", placeholder = "AA
       });
       setQuery(result.symbol);
       setShowResults(false);
+      setActiveIndex(-1);
     } catch {
       // If quote fetch fails, just return the symbol info
       onSelect(result);
       setQuery(result.symbol);
       setShowResults(false);
+      setActiveIndex(-1);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setShowResults(false);
+      setActiveIndex(-1);
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!showResults) {
+        setShowResults(true);
+        return;
+      }
+      if (results.length > 0) {
+        setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+      }
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+      return;
+    }
+    if (e.key === "Enter" && showResults && activeIndex >= 0 && results[activeIndex]) {
+      e.preventDefault();
+      handleSelect(results[activeIndex]);
     }
   };
 
   return (
     <div className="relative">
-      <Label>{label}</Label>
+      <Label htmlFor="symbol-search">{label}</Label>
       <div className="relative mt-2">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          id="symbol-search"
+          role="combobox"
+          aria-expanded={showResults && debouncedQuery.length > 0}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          autoComplete="off"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setShowResults(true);
           }}
           onFocus={() => setShowResults(true)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="pl-10"
         />
@@ -74,17 +118,21 @@ export function SymbolSearch({ onSelect, label = "Sembol Ara", placeholder = "AA
 
       {/* Search Results Dropdown */}
       {showResults && debouncedQuery.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-white shadow-lg">
+        <div id={listId} role="listbox" className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-lg">
           {results.length > 0 ? (
             <div className="max-h-60 overflow-y-auto">
-              {results.map((result) => (
+              {results.map((result, index) => (
                 <button
                   key={result.symbol}
                   type="button"
+                  role="option"
+                  aria-selected={index === activeIndex}
                   onClick={() => handleSelect(result)}
+                  onMouseEnter={() => setActiveIndex(index)}
                   className={cn(
-                    "w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b last:border-b-0",
-                    "focus:outline-none focus:bg-gray-50"
+                    "w-full px-4 py-3 text-left hover:bg-accent transition-colors border-b last:border-b-0",
+                    index === activeIndex ? "bg-accent" : "",
+                    "focus:outline-none focus:bg-accent"
                   )}
                 >
                   <div className="flex items-center justify-between">

@@ -203,6 +203,7 @@ export default function CashPage() {
                           size="icon"
                           onClick={() => setEditingCash(cash)}
                           title="Edit"
+                          aria-label="Edit cash account"
                           className="h-8 w-8"
                         >
                           <Pencil className="h-4 w-4" />
@@ -212,7 +213,8 @@ export default function CashPage() {
                           size="icon"
                           onClick={() => setDeletingCash(cash)}
                           title="Delete"
-                          className="text-red-600 hover:text-red-700 h-8 w-8"
+                          aria-label="Delete cash account"
+                          className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

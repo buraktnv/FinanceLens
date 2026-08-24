@@ -269,6 +269,7 @@ export default function GoldPage() {
                             size="icon"
                             onClick={() => setEditingGold(gold)}
                             title="Edit"
+                            aria-label="Edit gold holding"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -278,7 +279,8 @@ export default function GoldPage() {
                             size="icon"
                             onClick={() => setDeletingGold(gold)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 h-8 w-8"
+                            aria-label="Delete gold holding"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

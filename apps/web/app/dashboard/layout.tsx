@@ -178,6 +178,7 @@ export default function DashboardLayout({
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             className="h-9 w-9"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -186,23 +187,24 @@ export default function DashboardLayout({
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
+            aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation — horizontal scrollable strip exposing every route */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t">
-        <div className="grid grid-cols-5 gap-1 p-2">
-          {sidebarLinks.slice(0, 5).map((link) => (
+        <div className="flex gap-1 p-2 overflow-x-auto">
+          {[...sidebarLinks, { title: "Status", href: "/status", icon: FileText }].map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
+              className="flex flex-col items-center gap-1 shrink-0 min-w-[4rem] rounded-lg px-2 py-2 text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
             >
               <link.icon className="h-5 w-5" />
-              <span className="text-xs">{link.title}</span>
+              <span className="text-xs whitespace-nowrap">{link.title}</span>
             </Link>
           ))}
         </div>

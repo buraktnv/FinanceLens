@@ -237,19 +237,19 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-3">
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-center p-4 bg-muted/30 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">How Long Will Savings Last?</p>
               <p className="text-2xl md:text-3xl font-bold text-primary">{monthsOfSavings} Months</p>
               <p className="text-xs text-muted-foreground">At current expenses</p>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-center p-4 bg-muted/30 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">Monthly Savings Rate</p>
               <p className={`text-2xl md:text-3xl font-bold ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {formatPercent(savingsRate)}
               </p>
               <p className="text-xs text-muted-foreground">Of income</p>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <div className="text-center p-4 bg-muted/30 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">Total Assets</p>
               <p className="text-2xl md:text-3xl font-bold text-blue-600">{formatCurrency(totalAssets)}</p>
               <p className="text-xs text-muted-foreground">Sum of all assets</p>
@@ -342,7 +342,7 @@ function PortfolioItem({
         <span className="text-xs md:text-sm">{label}</span>
         <span className="text-xs md:text-sm font-medium">{value}</span>
       </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(percentage, 100)}%` }} />
       </div>
     </div>

@@ -191,6 +191,7 @@ export default function ETFsPage() {
                             size="icon"
                             onClick={() => setEditingEtf(etf)}
                             title="Edit"
+                            aria-label="Edit ETF"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -200,7 +201,8 @@ export default function ETFsPage() {
                             size="icon"
                             onClick={() => setDeletingEtf(etf)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                            aria-label="Delete ETF"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -318,7 +320,7 @@ export default function ETFsPage() {
 
 function DistributionItem({ etf, type, date, amount }: { etf: string; type: string; date: string; amount: string }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
       <div>
         <p className="font-medium">{etf} - {type}</p>
         <p className="text-sm text-muted-foreground">{date}</p>
