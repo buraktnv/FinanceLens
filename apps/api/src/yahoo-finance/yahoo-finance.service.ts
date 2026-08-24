@@ -5,7 +5,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 
-export type FxPair = 'USDTRY' | 'EURTRY';
+export type FxPair =
+  | 'USDTRY'
+  | 'EURTRY'
+  | 'GBPTRY'
+  | 'CHFTRY'
+  | 'JPYTRY'
+  | 'AUDTRY';
 
 export interface FxRate {
   rate: number;

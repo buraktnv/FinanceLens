@@ -29,12 +29,19 @@ describe('DashboardService', () => {
       expense: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
+    const fxRatesMock: Record<string, number> = {
+      USDTRY: 40,
+      EURTRY: 44,
+      GBPTRY: 50,
+      CHFTRY: 46,
+      JPYTRY: 0.27,
+      AUDTRY: 26,
+    };
     yahooFinanceService = {
-      getFxRate: jest.fn((pair: string) =>
-        pair === 'USDTRY'
-          ? { rate: 40, fetchedAt: fetchedAtIso }
-          : { rate: 44, fetchedAt: fetchedAtIso },
-      ),
+      getFxRate: jest.fn((pair: string) => ({
+        rate: fxRatesMock[pair] ?? 1,
+        fetchedAt: fetchedAtIso,
+      })),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -115,8 +122,13 @@ describe('DashboardService', () => {
       expect(result.fxRates).toEqual({
         USDTRY: 40,
         EURTRY: 44,
+        GBPTRY: 50,
+        CHFTRY: 46,
+        JPYTRY: 0.27,
+        AUDTRY: 26,
         fetchedAt: fetchedAtIso,
       });
+      expect(result.warnings).toEqual([]);
       expect(result.stale).toBeUndefined();
 
       for (const key of [
@@ -145,6 +157,61 @@ describe('DashboardService', () => {
         expect.objectContaining({ USDTRY: 1, EURTRY: 1 }),
       );
       expect(result.stale).toBe(true);
+    });
+
+    it('should convert GBP stock rows via the mocked GBPTRY rate', async () => {
+      prismaService.stock.findMany.mockResolvedValue([
+        {
+          id: 'stock-gbp',
+          symbol: 'HSBA',
+          quantity: decimal('2'),
+          purchasePrice: decimal('100'),
+          currency: 'GBP',
+        },
+      ]);
+
+      const result = await service.getOverview(userId);
+
+      // 2 x 100 x 50 (GBPTRY) = 10000
+      expect(result.breakdown.stocks.value).toBeCloseTo(10000, 6);
+      expect(result.totalAssets).toBeCloseTo(10000, 6);
+      expect(yahooFinanceService.getFxRate).toHaveBeenCalledWith('GBPTRY');
+      expect(result.fxRates.GBPTRY).toBeCloseTo(50, 6);
+      expect(result.warnings).toEqual([]);
+      expect(result.stale).toBeUndefined();
+    });
+
+    it('should count unknown-currency rows at nominal and push a warning', async () => {
+      prismaService.stock.findMany.mockResolvedValue([
+        {
+          id: 'stock-sek',
+          symbol: 'ERIC',
+          quantity: decimal('5'),
+          purchasePrice: decimal('100'),
+          currency: 'SEK',
+        },
+      ]);
+      prismaService.eTF.findMany.mockResolvedValue([
+        {
+          id: 'etf-cad',
+          symbol: 'XIC',
+          quantity: decimal('1'),
+          purchasePrice: decimal('200'),
+          currency: 'CAD',
+        },
+      ]);
+
+      const result = await service.getOverview(userId);
+
+      // both counted at nominal, no conversion
+      expect(result.breakdown.stocks.value).toBeCloseTo(500, 6);
+      expect(result.breakdown.etfs.value).toBeCloseTo(200, 6);
+      expect(yahooFinanceService.getFxRate).not.toHaveBeenCalledWith('SEKTRY');
+      expect(result.warnings).toHaveLength(2);
+      expect(result.warnings[0]).toContain('SEK');
+      expect(result.warnings[0]).toContain('ERIC');
+      expect(result.warnings[1]).toContain('CAD');
+      expect(result.warnings[1]).toContain('XIC');
     });
 
     it('should be stale when only one pair fails while the other keeps its rate', async () => {

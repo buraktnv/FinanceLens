@@ -12,6 +12,24 @@ interface PairRate {
 
 type FxRates = Record<FxPair, PairRate>;
 
+const FX_PAIRS = [
+  'USDTRY',
+  'EURTRY',
+  'GBPTRY',
+  'CHFTRY',
+  'JPYTRY',
+  'AUDTRY',
+] as const satisfies readonly FxPair[];
+
+const CURRENCY_TO_PAIR: Partial<Record<string, FxPair>> = {
+  USD: 'USDTRY',
+  EUR: 'EURTRY',
+  GBP: 'GBPTRY',
+  CHF: 'CHFTRY',
+  JPY: 'JPYTRY',
+  AUD: 'AUDTRY',
+};
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -20,12 +38,12 @@ export class DashboardService {
   ) {}
 
   /**
-   * Fetch USDTRY/EURTRY rates; on upstream failure fall back to rate=1
-   * and flag the overview as stale instead of failing the request.
+   * Fetch all supported FX pairs concurrently; on upstream failure fall back
+   * to rate=1 and flag the overview as stale instead of failing the request.
    */
   private async fetchFxRates(): Promise<{ rates: FxRates; stale: boolean }> {
-    const [usdTry, eurTry] = await Promise.all(
-      (['USDTRY', 'EURTRY'] as const).map(async (pair): Promise<PairRate> => {
+    const results = await Promise.all(
+      FX_PAIRS.map(async (pair): Promise<PairRate> => {
         try {
           const { rate, fetchedAt } = await this.yahooFinance.getFxRate(pair);
           return { rate, fetchedAt };
@@ -35,9 +53,13 @@ export class DashboardService {
       }),
     );
 
+    const rates = Object.fromEntries(
+      FX_PAIRS.map((pair, i) => [pair, results[i]]),
+    ) as FxRates;
+
     return {
-      rates: { USDTRY: usdTry, EURTRY: eurTry },
-      stale: usdTry.fetchedAt === null || eurTry.fetchedAt === null,
+      rates,
+      stale: results.some((r) => r.fetchedAt === null),
     };
   }
 
@@ -51,12 +73,27 @@ export class DashboardService {
 
   /**
    * Per-item currency drives the TRY multiplier:
-   * USD -> xUSDTRY, EUR -> xEURTRY, anything else (incl. TRY) -> x1.
+   * USD/EUR/GBP/CHF/JPY/AUD -> x<pair>TRY, TRY -> x1.
+   * Any other currency counts at nominal and records a warning so the
+   * understatement is visible instead of silent.
    */
-  private toTry(value: number, currency: string, rates: FxRates): number {
-    if (currency === 'USD') return value * rates.USDTRY.rate;
-    if (currency === 'EUR') return value * rates.EURTRY.rate;
-    return value;
+  private toTry(
+    value: number,
+    currency: string,
+    rates: FxRates,
+    warnings: string[],
+    assetLabel: string,
+  ): number {
+    if (currency === 'TRY') return value;
+
+    const pair = CURRENCY_TO_PAIR[currency];
+    if (!pair) {
+      warnings.push(
+        `Unsupported currency ${currency} held on asset ${assetLabel} counted at nominal`,
+      );
+      return value;
+    }
+    return value * rates[pair].rate;
   }
 
   async getOverview(userId: string) {
@@ -84,6 +121,7 @@ export class DashboardService {
       this.fetchFxRates(),
     ]);
     const { rates: fxRates, stale } = fx;
+    const warnings: string[] = [];
 
     // Calculate stock values (converted to TRY by row currency)
     const stocksValue = stocks.reduce(
@@ -93,6 +131,8 @@ export class DashboardService {
           Number(s.quantity) * Number(s.purchasePrice),
           s.currency as string,
           fxRates,
+          warnings,
+          (s as { symbol?: string }).symbol ?? s.id,
         ),
       0,
     );
@@ -105,6 +145,8 @@ export class DashboardService {
           Number(e.quantity) * Number(e.purchasePrice),
           e.currency as string,
           fxRates,
+          warnings,
+          (e as { symbol?: string }).symbol ?? e.id,
         ),
       0,
     );
@@ -117,6 +159,8 @@ export class DashboardService {
           Number(e.faceValue) * Number(e.quantity),
           e.currency as string,
           fxRates,
+          warnings,
+          (e as { name?: string }).name ?? e.id,
         ),
       0,
     );
@@ -178,10 +222,10 @@ export class DashboardService {
             : 0,
       },
       fxRates: {
-        USDTRY: fxRates.USDTRY.rate,
-        EURTRY: fxRates.EURTRY.rate,
+        ...Object.fromEntries(FX_PAIRS.map((p) => [p, fxRates[p].rate])),
         fetchedAt: this.latestFetchedAt(fxRates),
       },
+      warnings,
       ...(stale ? { stale: true } : {}),
     };
   }
