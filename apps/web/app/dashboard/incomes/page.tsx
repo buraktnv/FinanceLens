@@ -89,6 +89,10 @@ export default function IncomesPage() {
       toast.success("Income deleted successfully");
       setDeletingIncome(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingIncome(null);
+    },
   });
 
   const handleDelete = () => {

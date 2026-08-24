@@ -23,7 +23,12 @@ export default function DashboardPage() {
     queryFn: () => dashboardApi.getOverview(),
   });
 
-  const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
+  const {
+    data: transactions = [],
+    isLoading: transactionsLoading,
+    error: transactionsError,
+    refetch: refetchTransactions,
+  } = useQuery({
     queryKey: ["dashboard", "transactions"],
     queryFn: () => dashboardApi.getRecentTransactions(5),
   });
@@ -195,7 +200,18 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 md:space-y-4">
-              {transactions.length > 0 ? (
+              {transactionsError ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-red-500">
+                    {transactionsError instanceof Error
+                      ? transactionsError.message
+                      : "Error loading transactions"}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => refetchTransactions()} className="mt-2">
+                    Retry
+                  </Button>
+                </div>
+              ) : transactions.length > 0 ? (
                 transactions.map((tx) => (
                   <TransactionItem
                     key={tx.id}

@@ -62,13 +62,13 @@ export default function StatusPage() {
   // Derived metrics
   const monthsOfSavings = monthlyExpenses > 0 ? Math.floor(netWorth / monthlyExpenses) : 0;
   const investmentsValue =
-    overview.breakdown.stocks.value +
-    overview.breakdown.etfs.value +
-    overview.breakdown.eurobonds.value;
+    (overview.breakdown.stocks?.value ?? 0) +
+    (overview.breakdown.etfs?.value ?? 0) +
+    (overview.breakdown.eurobonds?.value ?? 0);
   const cashAndMetalsValue =
-    overview.breakdown.cash.value +
-    overview.breakdown.gold.value +
-    overview.breakdown.silver.value;
+    (overview.breakdown.cash?.value ?? 0) +
+    (overview.breakdown.gold?.value ?? 0) +
+    (overview.breakdown.silver?.value ?? 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,9 +148,9 @@ export default function StatusPage() {
             title="Investments"
             value={formatCurrency(investmentsValue)}
             items={[
-              { label: "Stocks", value: formatCurrency(overview.breakdown.stocks.value), extra: `${overview.breakdown.stocks.count} positions` },
-              { label: "ETFs", value: formatCurrency(overview.breakdown.etfs.value), extra: `${overview.breakdown.etfs.count} funds` },
-              { label: "Eurobonds", value: formatCurrency(overview.breakdown.eurobonds.value), extra: `${overview.breakdown.eurobonds.count} bonds` },
+              { label: "Stocks", value: formatCurrency(overview.breakdown.stocks?.value ?? 0), extra: `${overview.breakdown.stocks?.count ?? 0} positions` },
+              { label: "ETFs", value: formatCurrency(overview.breakdown.etfs?.value ?? 0), extra: `${overview.breakdown.etfs?.count ?? 0} funds` },
+              { label: "Eurobonds", value: formatCurrency(overview.breakdown.eurobonds?.value ?? 0), extra: `${overview.breakdown.eurobonds?.count ?? 0} bonds` },
             ]}
           />
 
@@ -160,9 +160,9 @@ export default function StatusPage() {
             title="Cash & Metals"
             value={formatCurrency(cashAndMetalsValue)}
             items={[
-              { label: "Cash Accounts", value: formatCurrency(overview.breakdown.cash.value), extra: `${overview.breakdown.cash.count} accounts` },
-              { label: "Gold Holdings", value: formatCurrency(overview.breakdown.gold.value), extra: `${overview.breakdown.gold.count} holdings` },
-              { label: "Silver Holdings", value: formatCurrency(overview.breakdown.silver.value), extra: `${overview.breakdown.silver.count} holdings` },
+              { label: "Cash Accounts", value: formatCurrency(overview.breakdown.cash?.value ?? 0), extra: `${overview.breakdown.cash?.count ?? 0} accounts` },
+              { label: "Gold Holdings", value: formatCurrency(overview.breakdown.gold?.value ?? 0), extra: `${overview.breakdown.gold?.count ?? 0} holdings` },
+              { label: "Silver Holdings", value: formatCurrency(overview.breakdown.silver?.value ?? 0), extra: `${overview.breakdown.silver?.count ?? 0} holdings` },
             ]}
           />
 
@@ -172,7 +172,7 @@ export default function StatusPage() {
             title="Liabilities"
             value={formatCurrency(totalLiabilities)}
             items={[
-              { label: "Loans", value: formatCurrency(overview.breakdown.loans.balance), extra: `${overview.breakdown.loans.count} active loan${overview.breakdown.loans.count !== 1 ? "s" : ""}` },
+              { label: "Loans", value: formatCurrency(overview.breakdown.loans?.balance ?? 0), extra: `${overview.breakdown.loans?.count ?? 0} active loan${overview.breakdown.loans?.count !== 1 ? "s" : ""}` },
             ]}
           />
         </div>

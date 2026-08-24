@@ -67,15 +67,23 @@ export default function GoldPage() {
       toast.success("Gold holding deleted successfully");
       setDeletingGold(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingGold(null);
+    },
   });
 
   // Fetch current gold price every 15 minutes
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPrice = async () => {
       try {
         const priceData = await preciousMetalsApi.getGoldPrice();
-        setCurrentPrice(priceData.pricePerGram);
-        setLastUpdated(new Date());
+        if (!cancelled) {
+          setCurrentPrice(priceData.pricePerGram);
+          setLastUpdated(new Date());
+        }
       } catch {
         // Price fetch failed — keep last known price
       }
@@ -84,7 +92,10 @@ export default function GoldPage() {
     fetchPrice();
     const interval = setInterval(fetchPrice, 15 * 60 * 1000); // 15 minutes
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   const filteredHoldings = holdings.filter((gold) =>

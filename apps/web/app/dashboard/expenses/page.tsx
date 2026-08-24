@@ -121,6 +121,10 @@ export default function ExpensesPage() {
       toast.success("Expense deleted successfully");
       setDeletingExpense(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingExpense(null);
+    },
   });
 
   const handleDelete = () => {

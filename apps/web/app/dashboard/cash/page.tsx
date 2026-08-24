@@ -65,6 +65,10 @@ export default function CashPage() {
       toast.success("Cash account deleted successfully");
       setDeletingCash(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingCash(null);
+    },
   });
 
   const filteredCash = cashAccounts.filter(

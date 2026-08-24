@@ -68,6 +68,10 @@ export default function StocksPage() {
       toast.success("Stock deleted successfully");
       setDeletingStock(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingStock(null);
+    },
   });
 
   const filteredStocks = stocks.filter(
@@ -84,6 +88,8 @@ export default function StocksPage() {
 
   // Fetch current prices for all stocks
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPrices = async () => {
       if (stocks.length === 0) return;
 
@@ -98,14 +104,21 @@ export default function StocksPage() {
           }
         })
       );
-      setCurrentPrices(prices);
+      if (!cancelled) {
+        setCurrentPrices(prices);
+      }
     };
 
     fetchPrices();
     // Refresh prices every 5 minutes
     const interval = setInterval(fetchPrices, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [stocks]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // Prices are keyed by symbol; only re-create the fetch loop when holdings are added/removed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stocks.length]);
 
   if (isLoading) {
     return (

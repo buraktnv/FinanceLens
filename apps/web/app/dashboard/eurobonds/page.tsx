@@ -63,6 +63,10 @@ export default function EurobondsPage() {
       toast.success("Eurobond deleted successfully");
       setDeletingEurobond(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingEurobond(null);
+    },
   });
 
   const handleDelete = () => {
