@@ -1,4 +1,16 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+
+export type FxPair = 'USDTRY' | 'EURTRY';
+
+export interface FxRate {
+  rate: number;
+  fetchedAt: string;
+}
 
 export interface YahooQuote {
   symbol: string;
@@ -19,6 +31,12 @@ export interface YahooSearchResult {
 
 @Injectable()
 export class YahooFinanceService {
+  private static readonly fxCache = new Map<
+    string,
+    { rate: number; fetchedAt: string; expiry: number }
+  >();
+  private static readonly FX_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
   private readonly baseUrl = 'https://query1.finance.yahoo.com';
 
   /**
@@ -105,6 +123,53 @@ export class YahooFinanceService {
       throw new HttpException(
         'Failed to get quote',
         HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get FX rate (TRY per unit of pair base currency) with 15 min cache
+   */
+  async getFxRate(pair: FxPair): Promise<FxRate> {
+    const cached = YahooFinanceService.fxCache.get(pair);
+    if (cached && cached.expiry > Date.now()) {
+      return { rate: cached.rate, fetchedAt: cached.fetchedAt };
+    }
+
+    try {
+      const url = `${this.baseUrl}/v8/finance/chart/${pair}=X`;
+
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!response.ok) {
+        throw new ServiceUnavailableException('FX rate service unavailable');
+      }
+
+      const data = (await response.json()) as {
+        chart?: { result?: Array<{ meta?: { regularMarketPrice?: unknown } }> };
+      };
+      const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+
+      if (typeof rate !== 'number' || !Number.isFinite(rate)) {
+        throw new ServiceUnavailableException('FX rate unavailable');
+      }
+
+      const entry = {
+        rate,
+        fetchedAt: new Date().toISOString(),
+        expiry: Date.now() + YahooFinanceService.FX_CACHE_TTL,
+      };
+      YahooFinanceService.fxCache.set(pair, entry);
+
+      return { rate: entry.rate, fetchedAt: entry.fetchedAt };
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      throw new ServiceUnavailableException(
+        `Failed to fetch ${pair} exchange rate`,
       );
     }
   }
