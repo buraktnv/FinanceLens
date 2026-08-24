@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 interface ErrorStateProps {
   message?: string;
   onRetry?: () => void;
+  retryLabel?: string;
 }
 
 export function ErrorState({
   message = "Error loading data",
   onRetry,
+  retryLabel,
 }: ErrorStateProps) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-8">
@@ -21,7 +23,7 @@ export function ErrorState({
       </Alert>
       {onRetry ? (
         <Button variant="outline" onClick={onRetry}>
-          Try Again
+          {retryLabel ?? "Try Again"}
         </Button>
       ) : null}
     </div>

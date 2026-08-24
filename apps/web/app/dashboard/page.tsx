@@ -1,9 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, Plus } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  PiggyBank,
+  Plus,
+  X,
+  Banknote,
+} from "lucide-react";
 import Link from "next/link";
 import {
   EmptyState,
@@ -11,15 +21,26 @@ import {
   PageHeader,
   StatCard,
 } from "@/components/shared";
-import { dashboardApi, expensesApi } from "@/lib/api";
+import { cashApi, dashboardApi, expensesApi } from "@/lib/api";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 import { AllocationDonut } from "@/components/charts/allocation-donut";
 import { CategoryBar } from "@/components/charts/category-bar";
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  TRY: "₺",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  JPY: "¥",
+};
 
 export default function DashboardPage() {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
+  const [dismissedFxSignal, setDismissedFxSignal] = useState<string | null>(
+    null
+  );
 
   const {
     data: overview,
@@ -51,7 +72,16 @@ export default function DashboardPage() {
     queryFn: () => expensesApi.getSummary(currentMonth, currentYear),
   });
 
-  const isLoading = overviewLoading || transactionsLoading || summaryLoading;
+  const { data: cashSummary, isLoading: cashSummaryLoading } = useQuery({
+    queryKey: ["cash", "summary"],
+    queryFn: () => cashApi.getSummary(),
+  });
+
+  const isLoading =
+    overviewLoading ||
+    transactionsLoading ||
+    summaryLoading ||
+    cashSummaryLoading;
 
   if (isLoading) {
     return (
@@ -61,7 +91,7 @@ export default function DashboardPage() {
           <Skeleton className="h-4 w-64" />
         </div>
         <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
+          {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton key={index} className="h-28" />
           ))}
         </div>
@@ -83,12 +113,23 @@ export default function DashboardPage() {
     return (
       <ErrorState
         message={
-          overviewError instanceof Error ? overviewError.message : undefined
+          overviewError instanceof Error
+            ? overviewError.message
+            : "Finansal özet yüklenemedi"
         }
         onRetry={() => refetchOverview()}
+        retryLabel="Yenile"
       />
     );
   }
+
+  const fxWarnings = overview?.warnings ?? [];
+  // Dismissal is keyed to the current signal so a changed warning set or a
+  // new staleness flag resurfaces the banner.
+  const fxSignalKey = `${overview?.stale ? "stale" : ""}|${fxWarnings.join("|")}`;
+  const showFxBanner =
+    (overview?.stale === true || fxWarnings.length > 0) &&
+    dismissedFxSignal !== fxSignalKey;
 
   const netWorth = overview?.netWorth ?? 0;
   const totalAssets = overview?.totalAssets ?? 0;
@@ -100,58 +141,102 @@ export default function DashboardPage() {
   // Calculate how long savings will last (runway: net worth / monthly expenses)
   const monthsOfSavings = monthlyExpenses > 0 ? Math.floor(netWorth / monthlyExpenses) : 0;
 
+  // Multi-currency honesty for the cash aggregate: the total mixes balances
+  // without conversion, so disclose which currencies are present.
+  const cashCurrencies = Object.keys(cashSummary?.byCurrency ?? {});
+  const cashHint =
+    cashCurrencies.length > 1
+      ? `${cashCurrencies.map((c) => CURRENCY_SYMBOLS[c] ?? c).join(", ")} cinsi hesaplar`
+      : undefined;
+
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Page Header */}
-      <PageHeader title="Overview" description="Your financial summary" />
+      <PageHeader title="Genel Bakış" description="Finansal özetiniz" />
+
+      {/* FX staleness / unsupported-currency warning */}
+      {showFxBanner ? (
+        <Card className="border-warning/30 bg-warning/15">
+          <CardContent className="flex items-start justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-warning-foreground">
+                Döviz kurları güncellenemedi — desteklenmeyen para birimleri
+                nominal sayıldı
+              </p>
+              {fxWarnings.length > 0 ? (
+                <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                  {fxWarnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0 text-warning-foreground"
+              aria-label="Uyarıyı kapat"
+              onClick={() => setDismissedFxSignal(fxSignalKey)}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Stats Cards */}
       <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Assets"
+          title="Toplam Varlık"
           value={formatCurrency(totalAssets)}
           icon={Wallet}
         />
         <StatCard
-          title="Monthly Income"
+          title="Aylık Gelir"
           value={formatCurrency(monthlyIncome)}
           icon={TrendingUp}
           tone="success"
         />
         <StatCard
-          title="Monthly Expenses"
+          title="Aylık Gider"
           value={formatCurrency(monthlyExpenses)}
           icon={TrendingDown}
           tone="danger"
         />
         <StatCard
-          title="Monthly Savings"
+          title="Aylık Birikim"
           value={formatCurrency(monthlySavings)}
           icon={PiggyBank}
           tone={monthlySavings >= 0 ? "success" : "danger"}
+        />
+        <StatCard
+          title="Nakit"
+          value={formatCurrency(cashSummary?.totalBalance)}
+          hint={cashHint}
+          icon={Banknote}
         />
       </div>
 
       {/* Quick Actions */}
       <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
         <QuickActionCard
-          title="Add Cash"
-          description="Add new cash account"
+          title="Nakit Ekle"
+          description="Yeni nakit hesabı ekle"
           href="/dashboard/cash"
         />
         <QuickActionCard
-          title="Add Gold"
-          description="Add gold holdings"
+          title="Altın Ekle"
+          description="Altın varlığı ekle"
           href="/dashboard/gold"
         />
         <QuickActionCard
-          title="Add Silver"
-          description="Add silver holdings"
+          title="Gümüş Ekle"
+          description="Gümüş varlığı ekle"
           href="/dashboard/silver"
         />
         <QuickActionCard
-          title="Add Stock"
-          description="Add stock position"
+          title="Hisse Ekle"
+          description="Hisse pozisyonu ekle"
           href="/dashboard/stocks"
         />
       </div>
@@ -169,7 +254,7 @@ export default function DashboardPage() {
             {overview?.breakdown ? (
               <AllocationDonut breakdown={overview.breakdown} />
             ) : (
-              <EmptyState title="No investments added yet" />
+              <EmptyState title="Henüz yatırım eklenmedi" />
             )}
           </CardContent>
         </Card>
@@ -192,6 +277,7 @@ export default function DashboardPage() {
                     : undefined
                 }
                 onRetry={() => refetchSummary()}
+                retryLabel="Yenile"
               />
             ) : summaryLoading ? (
               <Skeleton className="h-64 w-full" />
@@ -205,8 +291,10 @@ export default function DashboardPage() {
       {/* Recent Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Recent Transactions</CardTitle>
-          <CardDescription className="text-sm">Latest financial transactions</CardDescription>
+          <CardTitle className="text-lg md:text-xl">Son İşlemler</CardTitle>
+          <CardDescription className="text-sm">
+            Son finansal hareketler
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 md:space-y-4">
@@ -218,6 +306,7 @@ export default function DashboardPage() {
                     : undefined
                 }
                 onRetry={() => refetchTransactions()}
+                retryLabel="Yenile"
               />
             ) : transactions.length > 0 ? (
               transactions.map((tx) => (
@@ -225,12 +314,12 @@ export default function DashboardPage() {
                   key={tx.id}
                   title={tx.description || tx.category}
                   date={formatDate(tx.date)}
-                  amount={`${tx.type === "income" ? "+" : "-"}${formatCurrency(tx.amount, tx.currency)}`}
+                  amount={formatCurrency(tx.amount, tx.currency)}
                   type={tx.type === "income" ? "income" : "expense"}
                 />
               ))
             ) : (
-              <EmptyState title="No transactions yet" />
+              <EmptyState title="Henüz işlem yok" />
             )}
           </div>
         </CardContent>
@@ -239,27 +328,43 @@ export default function DashboardPage() {
       {/* Savings Projection */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Savings Projection</CardTitle>
-          <CardDescription className="text-sm">Future estimate based on current savings rate</CardDescription>
+          <CardTitle className="text-lg md:text-xl">
+            Birikim Projeksiyonu
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Mevcut birikim oranına dayalı gelecek tahmini
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-3">
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-xs md:text-sm text-muted-foreground">How Long Will Savings Last?</p>
-              <p className="text-2xl md:text-3xl font-bold text-primary tabular-nums">{monthsOfSavings} Months</p>
-              <p className="text-xs text-muted-foreground">At current expenses</p>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Paranın yeteceği ay
+              </p>
+              <p className="text-2xl md:text-3xl font-bold text-primary tabular-nums">
+                {monthsOfSavings} ay
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Mevcut giderlerle
+              </p>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-xs md:text-sm text-muted-foreground">Monthly Savings Rate</p>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Aylık Birikim Oranı
+              </p>
               <p className={`text-2xl md:text-3xl font-bold tabular-nums ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {formatPercent(savingsRate)}
               </p>
-              <p className="text-xs text-muted-foreground">Of income</p>
+              <p className="text-xs text-muted-foreground">Gelirden</p>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
-              <p className="text-xs md:text-sm text-muted-foreground">Total Assets</p>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Toplam Varlık
+              </p>
               <p className="text-2xl md:text-3xl font-bold text-blue-600 tabular-nums">{formatCurrency(totalAssets)}</p>
-              <p className="text-xs text-muted-foreground">Sum of all assets</p>
+              <p className="text-xs text-muted-foreground">
+                Tüm varlıkların toplamı
+              </p>
             </div>
           </div>
         </CardContent>
