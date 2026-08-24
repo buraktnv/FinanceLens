@@ -31,18 +31,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Calendar, Loader2, Pencil, Trash2, Wallet, Banknote, TrendingUp, Percent } from "lucide-react";
 import { eurobondsApi, Eurobond } from "@/lib/api";
 import { AddEurobondForm } from "@/components/forms/add-eurobond-form";
 import { EditEurobondForm } from "@/components/forms/edit-eurobond-form";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EurobondsPage() {
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEurobond, setEditingEurobond] = useState<Eurobond | null>(null);
   const [deletingEurobond, setDeletingEurobond] = useState<Eurobond | null>(null);
-  const { data: eurobonds = [], isLoading: bondsLoading, error: bondsError } = useQuery({
+  const {
+    data: eurobonds = [],
+    isLoading: bondsLoading,
+    error: bondsError,
+    refetch: refetchBonds,
+  } = useQuery({
     queryKey: ["eurobonds"],
     queryFn: () => eurobondsApi.getAll(),
   });
@@ -77,22 +90,30 @@ export default function EurobondsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32 sm:h-9" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-44" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (bondsError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {bondsError instanceof Error ? bondsError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={bondsError instanceof Error ? bondsError.message : undefined}
+        onRetry={() => refetchBonds()}
+      />
     );
   }
 
@@ -104,51 +125,28 @@ export default function EurobondsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Eurobonds</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage your eurobond portfolio</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Eurobond
-        </Button>
-      </div>
+      <PageHeader
+        title="Eurobonds"
+        description="Manage your eurobond portfolio"
+        actions={
+          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" />
+            Add New Eurobond
+          </Button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Face Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalFaceValue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCurrentValue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Annual Coupon Income</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(annualCouponIncome)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Average Yield</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatPercent(avgYield)}</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Face Value" value={formatCurrency(totalFaceValue)} icon={Wallet} />
+        <StatCard title="Current Value" value={formatCurrency(totalCurrentValue)} icon={Banknote} />
+        <StatCard
+          title="Annual Coupon Income"
+          value={formatCurrency(annualCouponIncome)}
+          icon={TrendingUp}
+          tone="success"
+        />
+        <StatCard title="Average Yield" value={formatPercent(avgYield)} icon={Percent} />
       </div>
 
       {/* Eurobonds Table */}
@@ -185,19 +183,19 @@ export default function EurobondsPage() {
                     <TableRow key={bond.id}>
                       <TableCell className="font-medium">{bond.name}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">{bond.isin || "-"}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(faceValue, bond.currency)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(purchasePrice, bond.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(faceValue, bond.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(purchasePrice, bond.currency)}</TableCell>
                       <TableCell className="text-right">
-                        <Badge variant="secondary">{formatPercent(couponRate)}</Badge>
+                        <Badge variant="secondary" className="tabular-nums">{formatPercent(couponRate)}</Badge>
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 tabular-nums">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
                           <span>{formatDate(bond.maturityDate)}</span>
                           <span className="text-muted-foreground text-xs">({yearsToMaturity} yrs)</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-sm text-green-600">
+                      <TableCell className="text-right text-sm text-green-600 tabular-nums">
                         {formatCurrency(annualIncome, bond.currency)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -230,13 +228,15 @@ export default function EurobondsPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">No eurobonds added yet</p>
-              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4" />
-                Add Your First Eurobond
-              </Button>
-            </div>
+            <EmptyState
+              title="No eurobonds added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Your First Eurobond
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>
@@ -340,7 +340,7 @@ function CouponItem({ bond, date, amount }: { bond: string; date: string; amount
         <p className="font-medium">{bond}</p>
         <p className="text-sm text-muted-foreground">{date}</p>
       </div>
-      <span className="font-medium text-green-600">{amount}</span>
+      <span className="font-medium text-green-600 tabular-nums">{amount}</span>
     </div>
   );
 }

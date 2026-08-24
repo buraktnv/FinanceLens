@@ -30,12 +30,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Repeat, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Repeat, Loader2, Pencil, Trash2, TrendingDown, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { expensesApi, Expense } from "@/lib/api";
 import { AddExpenseForm } from "@/components/forms/add-expense-form";
 import { EditExpenseForm } from "@/components/forms/edit-expense-form";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const expenseCategories: Record<string, { label: string; color: string }> = {
   RENT: { label: "Rent", color: "bg-red-500/15 text-red-600 dark:text-red-400" },
@@ -100,7 +108,12 @@ export default function ExpensesPage() {
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // API expects 1-based month
   const currentYear = now.getFullYear();
-  const { data: expenses = [], isLoading: expensesLoading, error: expensesError } = useQuery({
+  const {
+    data: expenses = [],
+    isLoading: expensesLoading,
+    error: expensesError,
+    refetch: refetchExpenses,
+  } = useQuery({
     queryKey: ["expenses"],
     queryFn: () => expensesApi.getAll(),
   });
@@ -135,22 +148,32 @@ export default function ExpensesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-36 sm:h-9" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-44" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (expensesError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {expensesError instanceof Error ? expensesError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={
+          expensesError instanceof Error ? expensesError.message : undefined
+        }
+        onRetry={() => refetchExpenses()}
+      />
     );
   }
 
@@ -162,45 +185,37 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Expenses</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Track your spending</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Expense
-        </Button>
-      </div>
+      <PageHeader
+        title="Expenses"
+        description="Track your spending"
+        actions={
+          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" />
+            Add New Expense
+          </Button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">This Month Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-red-600">{formatCurrency(totalThisMonth)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Fixed Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalRecurring)}</div>
-            <p className="text-xs text-muted-foreground">Monthly recurring</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Transaction Count</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{expenseCount}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="This Month Total"
+          value={formatCurrency(totalThisMonth)}
+          icon={TrendingDown}
+          tone="danger"
+        />
+        <StatCard
+          title="Fixed Expenses"
+          value={formatCurrency(totalRecurring)}
+          hint="Monthly recurring"
+          icon={Repeat}
+        />
+        <StatCard
+          title="Transaction Count"
+          value={expenseCount}
+          hint="This month"
+          icon={Layers}
+        />
       </div>
 
       {/* Expense Distribution */}
@@ -219,13 +234,13 @@ export default function ExpensesPage() {
                   const pct = totalThisMonth > 0 ? (amount / totalThisMonth) * 100 : 0;
                   return (
                     <div key={category} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
-                          <span className="text-sm text-muted-foreground">{formatPercent(pct)}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
+                            <span className="text-sm text-muted-foreground tabular-nums">{formatPercent(pct)}</span>
+                          </div>
+                          <span className="font-medium text-sm sm:text-base tabular-nums">{formatCurrency(amount)}</span>
                         </div>
-                        <span className="font-medium text-sm sm:text-base">{formatCurrency(amount)}</span>
-                      </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full"
@@ -237,7 +252,7 @@ export default function ExpensesPage() {
                 })}
             </div>
           ) : (
-            <p className="text-sm sm:text-base text-muted-foreground text-center py-4">No expense data yet</p>
+            <EmptyState title="No expense data yet" />
           )}
         </CardContent>
       </Card>
@@ -272,7 +287,7 @@ export default function ExpensesPage() {
                         <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
                       </TableCell>
                       <TableCell className="text-sm">{expense.description || "-"}</TableCell>
-                      <TableCell className="text-right font-medium text-sm text-red-600">
+                      <TableCell className="text-right font-medium text-sm text-red-600 tabular-nums">
                         -{formatCurrency(amount, expense.currency)}
                       </TableCell>
                       <TableCell className="text-sm">{formatDate(expense.date)}</TableCell>
@@ -325,13 +340,15 @@ export default function ExpensesPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">No expenses added yet</p>
-              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4" />
-                Add Your First Expense
-              </Button>
-            </div>
+            <EmptyState
+              title="No expenses added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Your First Expense
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>

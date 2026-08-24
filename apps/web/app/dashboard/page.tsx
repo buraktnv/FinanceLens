@@ -2,23 +2,25 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  PiggyBank,
-  ArrowUpRight,
-  ArrowDownRight,
-  Plus,
-  Loader2,
-} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TrendingUp, TrendingDown, Wallet, PiggyBank, Plus } from "lucide-react";
 import Link from "next/link";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+} from "@/components/shared";
 import { dashboardApi } from "@/lib/api";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 
 export default function DashboardPage() {
-  const { data: overview, isLoading: overviewLoading, error: overviewError } = useQuery({
+  const {
+    data: overview,
+    isLoading: overviewLoading,
+    error: overviewError,
+    refetch: refetchOverview,
+  } = useQuery({
     queryKey: ["dashboard", "overview"],
     queryFn: () => dashboardApi.getOverview(),
   });
@@ -37,22 +39,38 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6 md:space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-44 md:h-9" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-16" />
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-72" />
+          <Skeleton className="h-72" />
+        </div>
+        <Skeleton className="h-52" />
       </div>
     );
   }
 
   if (overviewError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {overviewError instanceof Error ? overviewError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={
+          overviewError instanceof Error ? overviewError.message : undefined
+        }
+        onRetry={() => refetchOverview()}
+      />
     );
   }
 
@@ -69,40 +87,32 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold">Overview</h1>
-        <p className="text-sm md:text-base text-muted-foreground">Your financial summary</p>
-      </div>
+      <PageHeader title="Overview" description="Your financial summary" />
 
       {/* Stats Cards */}
       <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Assets"
           value={formatCurrency(totalAssets)}
-          change=""
-          trend="up"
-          icon={<Wallet className="h-4 w-4" />}
+          icon={Wallet}
         />
         <StatCard
           title="Monthly Income"
           value={formatCurrency(monthlyIncome)}
-          change=""
-          trend="up"
-          icon={<ArrowDownRight className="h-4 w-4" />}
+          icon={TrendingUp}
+          tone="success"
         />
         <StatCard
           title="Monthly Expenses"
           value={formatCurrency(monthlyExpenses)}
-          change=""
-          trend="down"
-          icon={<ArrowUpRight className="h-4 w-4" />}
+          icon={TrendingDown}
+          tone="danger"
         />
         <StatCard
           title="Monthly Savings"
           value={formatCurrency(monthlySavings)}
-          change=""
-          trend={monthlySavings >= 0 ? "up" : "down"}
-          icon={<PiggyBank className="h-4 w-4" />}
+          icon={PiggyBank}
+          tone={monthlySavings >= 0 ? "success" : "danger"}
         />
       </div>
 
@@ -187,7 +197,7 @@ export default function DashboardPage() {
                 (overview.breakdown.etfs?.value ?? 0) === 0 &&
                 (overview.breakdown.eurobonds?.value ?? 0) === 0
               )) && (
-                <p className="text-sm text-muted-foreground text-center py-4">No investments added yet</p>
+                <EmptyState title="No investments added yet" />
               )}
             </div>
           </CardContent>
@@ -201,16 +211,14 @@ export default function DashboardPage() {
           <CardContent>
             <div className="space-y-3 md:space-y-4">
               {transactionsError ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-red-500">
-                    {transactionsError instanceof Error
+                <ErrorState
+                  message={
+                    transactionsError instanceof Error
                       ? transactionsError.message
-                      : "Error loading transactions"}
-                  </p>
-                  <Button variant="outline" size="sm" onClick={() => refetchTransactions()} className="mt-2">
-                    Retry
-                  </Button>
-                </div>
+                      : undefined
+                  }
+                  onRetry={() => refetchTransactions()}
+                />
               ) : transactions.length > 0 ? (
                 transactions.map((tx) => (
                   <TransactionItem
@@ -222,7 +230,7 @@ export default function DashboardPage() {
                   />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No transactions yet</p>
+                <EmptyState title="No transactions yet" />
               )}
             </div>
           </CardContent>
@@ -239,63 +247,25 @@ export default function DashboardPage() {
           <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-3">
             <div className="text-center p-4 bg-muted/30 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">How Long Will Savings Last?</p>
-              <p className="text-2xl md:text-3xl font-bold text-primary">{monthsOfSavings} Months</p>
+              <p className="text-2xl md:text-3xl font-bold text-primary tabular-nums">{monthsOfSavings} Months</p>
               <p className="text-xs text-muted-foreground">At current expenses</p>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">Monthly Savings Rate</p>
-              <p className={`text-2xl md:text-3xl font-bold ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <p className={`text-2xl md:text-3xl font-bold tabular-nums ${Number(savingsRate) >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {formatPercent(savingsRate)}
               </p>
               <p className="text-xs text-muted-foreground">Of income</p>
             </div>
             <div className="text-center p-4 bg-muted/30 rounded-lg">
               <p className="text-xs md:text-sm text-muted-foreground">Total Assets</p>
-              <p className="text-2xl md:text-3xl font-bold text-blue-600">{formatCurrency(totalAssets)}</p>
+              <p className="text-2xl md:text-3xl font-bold text-blue-600 tabular-nums">{formatCurrency(totalAssets)}</p>
               <p className="text-xs text-muted-foreground">Sum of all assets</p>
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  change,
-  trend,
-  icon,
-}: {
-  title: string;
-  value: string;
-  change: string;
-  trend: "up" | "down";
-  icon: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-lg md:text-2xl font-bold truncate">{value}</div>
-        {change && (
-          <div className={`flex items-center text-xs ${trend === "up" ? "text-green-600" : "text-red-600"}`}>
-            {trend === "up" ? (
-              <TrendingUp className="h-3 w-3 mr-1" />
-            ) : (
-              <TrendingDown className="h-3 w-3 mr-1" />
-            )}
-            {change} vs last month
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -340,7 +310,7 @@ function PortfolioItem({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs md:text-sm">{label}</span>
-        <span className="text-xs md:text-sm font-medium">{value}</span>
+        <span className="text-xs md:text-sm font-medium tabular-nums">{value}</span>
       </div>
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(percentage, 100)}%` }} />
@@ -372,7 +342,7 @@ function TransactionItem({
         <p className="text-sm md:text-base font-medium truncate">{title}</p>
         <p className="text-xs md:text-sm text-muted-foreground">{date}</p>
       </div>
-      <span className={`text-sm md:text-base font-medium ${colors[type]} shrink-0`}>{amount}</span>
+      <span className={`text-sm md:text-base font-medium ${colors[type]} shrink-0 tabular-nums`}>{amount}</span>
     </div>
   );
 }

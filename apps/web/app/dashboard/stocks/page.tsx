@@ -30,13 +30,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, BarChart3 } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, BarChart3, Wallet, TrendingUp, Layers } from "lucide-react";
 import { stocksApi, Stock, yahooFinanceApi } from "@/lib/api";
 import { AddStockForm } from "@/components/forms/add-stock-form";
 import { EditStockForm } from "@/components/forms/edit-stock-form";
 import { StockChart } from "@/components/stock-chart";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
 import { toast } from "sonner";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StocksPage() {
   const queryClient = useQueryClient();
@@ -47,7 +55,12 @@ export default function StocksPage() {
   const [chartStock, setChartStock] = useState<Stock | null>(null);
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
 
-  const { data: stocks = [], isLoading: stocksLoading, error: stocksError } = useQuery({
+  const {
+    data: stocks = [],
+    isLoading: stocksLoading,
+    error: stocksError,
+    refetch: refetchStocks,
+  } = useQuery({
     queryKey: ["stocks"],
     queryFn: () => stocksApi.getAll(),
   });
@@ -122,22 +135,32 @@ export default function StocksPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-36 sm:h-9" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-40" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={6} />
       </div>
     );
   }
 
   if (stocksError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {stocksError instanceof Error ? stocksError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={
+          stocksError instanceof Error ? stocksError.message : undefined
+        }
+        onRetry={() => refetchStocks()}
+      />
     );
   }
 
@@ -147,43 +170,27 @@ export default function StocksPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Stocks</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage your stock portfolio</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Stock
-        </Button>
-      </div>
+      <PageHeader
+        title="Stocks"
+        description="Manage your stock portfolio"
+        actions={
+          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" />
+            Add New Stock
+          </Button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Dividends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(totalDividends)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Stock Count</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{summary?.totalStocks ?? 0}</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Cost" value={formatCurrency(totalCost)} icon={Wallet} />
+        <StatCard
+          title="Total Dividends"
+          value={formatCurrency(totalDividends)}
+          icon={TrendingUp}
+          tone="success"
+        />
+        <StatCard title="Stock Count" value={summary?.totalStocks ?? 0} icon={Layers} />
       </div>
 
       {/* Search */}
@@ -236,19 +243,19 @@ export default function StocksPage() {
                     <TableRow key={stock.id}>
                       <TableCell className="font-medium">{stock.symbol}</TableCell>
                       <TableCell>{stock.name}</TableCell>
-                      <TableCell className="text-right">{quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(purchasePrice, stock.currency)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">{quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(purchasePrice, stock.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
                         {currentPrice ? (
                           formatCurrency(currentPrice, stock.currency)
                         ) : (
                           <Loader2 className="h-4 w-4 animate-spin inline" />
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">
                         {currentValue ? formatCurrency(currentValue, stock.currency) : "-"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">
                         {profitLoss !== null ? (
                           <div className={profitLoss >= 0 ? "text-green-600" : "text-red-600"}>
                             <div className="font-medium">
@@ -262,7 +269,7 @@ export default function StocksPage() {
                           </div>
                         ) : "-"}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
+                      <TableCell className="text-right text-sm tabular-nums">
                         {formatDate(stock.purchaseDate)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -304,18 +311,18 @@ export default function StocksPage() {
                 })}
               </TableBody>
             </Table>
+          ) : searchTerm ? (
+            <EmptyState title="No stocks found matching your search" />
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">
-                {searchTerm ? "No stocks found matching your search" : "No stocks added yet"}
-              </p>
-              {!searchTerm && (
-                <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
+            <EmptyState
+              title="No stocks added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4" />
                   Add Your First Stock
                 </Button>
-              )}
-            </div>
+              }
+            />
           )}
         </CardContent>
       </Card>

@@ -11,13 +11,19 @@ import {
   TrendingUp,
   CreditCard,
   ArrowLeft,
-  Loader2,
 } from "lucide-react";
 import { dashboardApi, incomesApi, expensesApi } from "@/lib/api";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { ErrorState } from "@/components/shared";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StatusPage() {
-  const { data: overview, isLoading, error } = useQuery({
+  const {
+    data: overview,
+    isLoading,
+    error,
+    refetch: refetchOverview,
+  } = useQuery({
     queryKey: ["dashboard", "overview"],
     queryFn: () => dashboardApi.getOverview(),
   });
@@ -34,19 +40,27 @@ export default function StatusPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <main className="container mx-auto px-4 py-6 sm:py-8 space-y-6 sm:space-y-8">
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-56 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-72 w-full rounded-xl" />
+        </main>
       </div>
     );
   }
 
   if (error || !overview) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <p className="text-red-500">
-          {error instanceof Error ? error.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      <div className="min-h-screen bg-background">
+        <ErrorState
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => refetchOverview()}
+        />
       </div>
     );
   }
@@ -101,18 +115,18 @@ export default function StatusPage() {
           <CardContent className="space-y-6">
             {/* Net Worth Amount */}
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-3">
+              <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-3 tabular-nums">
                 {formatCurrency(netWorth)}
               </div>
               <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-sm">
                 <div>
                   <span className="text-muted-foreground">Assets: </span>
-                  <span className="font-semibold text-green-600">{formatCurrency(totalAssets)}</span>
+                  <span className="font-semibold text-green-600 tabular-nums">{formatCurrency(totalAssets)}</span>
                 </div>
                 <span className="hidden sm:inline text-muted-foreground">•</span>
                 <div>
                   <span className="text-muted-foreground">Debt: </span>
-                  <span className="font-semibold text-red-600">{formatCurrency(totalLiabilities)}</span>
+                  <span className="font-semibold text-red-600 tabular-nums">{formatCurrency(totalLiabilities)}</span>
                 </div>
               </div>
             </div>
@@ -123,17 +137,17 @@ export default function StatusPage() {
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
               <div className="text-center p-3 sm:p-4 rounded-lg border border-blue-500/20 bg-blue-500/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Savings Last</p>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{monthsOfSavings} Months</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600 tabular-nums">{monthsOfSavings} Months</p>
                 <p className="text-xs text-muted-foreground">At {formatCurrency(monthlyExpenses)}/mo expenses</p>
               </div>
               <div className="text-center p-3 sm:p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Monthly Savings</p>
-                <p className="text-2xl sm:text-3xl font-bold text-green-600">{formatCurrency(monthlySavings)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-600 tabular-nums">{formatCurrency(monthlySavings)}</p>
                 <p className="text-xs text-muted-foreground">{formatPercent(savingsRate)} of income</p>
               </div>
               <div className="text-center p-3 sm:p-4 rounded-lg border border-purple-500/20 bg-purple-500/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Save Rate</p>
-                <p className="text-2xl sm:text-3xl font-bold text-purple-600">{formatPercent(savingsRate)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600 tabular-nums">{formatPercent(savingsRate)}</p>
                 <p className="text-xs text-muted-foreground">{formatCurrency(monthlyIncome)}/mo income</p>
               </div>
             </div>
@@ -268,7 +282,7 @@ function AssetCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
-          <p className="text-xl sm:text-2xl font-bold">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold tabular-nums">{value}</p>
         </div>
         <div className="space-y-1.5">
           {items.map((item, i) => (
@@ -277,7 +291,7 @@ function AssetCard({
                 <span className="truncate block">{item.label}</span>
                 {item.extra && <p className="text-xs text-muted-foreground truncate">{item.extra}</p>}
               </div>
-              <span className="font-medium ml-2 shrink-0">{item.value}</span>
+              <span className="font-medium ml-2 shrink-0 tabular-nums">{item.value}</span>
             </div>
           ))}
         </div>
@@ -307,7 +321,7 @@ function LiabilityCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div>
-          <p className="text-xl sm:text-2xl font-bold text-red-600">{value}</p>
+          <p className="text-xl sm:text-2xl font-bold text-red-600 tabular-nums">{value}</p>
           <Badge variant="destructive" className="text-xs">Debt</Badge>
         </div>
         <div className="space-y-1.5">
@@ -317,7 +331,7 @@ function LiabilityCard({
                 <span className="truncate block">{item.label}</span>
                 {item.extra && <p className="text-xs text-muted-foreground truncate">{item.extra}</p>}
               </div>
-              <span className="font-medium text-red-600 ml-2 shrink-0">{item.value}</span>
+              <span className="font-medium text-red-600 ml-2 shrink-0 tabular-nums">{item.value}</span>
             </div>
           ))}
         </div>
@@ -345,7 +359,7 @@ function SummaryItem({
   return (
     <div className="text-center p-3 sm:p-4 bg-muted/30 rounded-lg">
       <p className="text-xs sm:text-sm text-muted-foreground">{label}</p>
-      <p className={`text-lg sm:text-2xl font-bold ${colors[type]}`}>{value}</p>
+      <p className={`text-lg sm:text-2xl font-bold tabular-nums ${colors[type]}`}>{value}</p>
     </div>
   );
 }
@@ -365,13 +379,13 @@ function CashFlowItem({
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs sm:text-sm">
         <span>{label}</span>
-        <span className="font-medium">{value}</span>
+        <span className="font-medium tabular-nums">{value}</span>
       </div>
       <div className="flex items-center gap-2">
         <div className="h-2 bg-muted rounded-full overflow-hidden flex-1">
           <div className={`h-full ${color} rounded-full`} style={{ width: `${percentage}%` }} />
         </div>
-        <span className="text-xs text-muted-foreground w-10 text-right">{formatPercent(percentage)}</span>
+        <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">{formatPercent(percentage)}</span>
       </div>
     </div>
   );
