@@ -77,8 +77,8 @@ export class PreciousMetalsService {
       return result;
     } catch (error) {
       throw new HttpException(
-        `Failed to fetch ${metal} price: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to fetch ${metal} price`,
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
   }
@@ -89,7 +89,9 @@ export class PreciousMetalsService {
   private async getQuote(symbol: string): Promise<any> {
     const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!response.ok) {
       throw new HttpException(
         'Yahoo Finance API error',

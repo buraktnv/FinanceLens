@@ -72,7 +72,9 @@ export class YahooFinanceService {
     try {
       const url = `${this.baseUrl}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         throw new HttpException(
@@ -111,7 +113,9 @@ export class YahooFinanceService {
     try {
       const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         throw new HttpException(
@@ -215,7 +219,9 @@ export class YahooFinanceService {
     try {
       const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${encodeURIComponent(safeInterval)}&includePrePost=true&events=div%7Csplit%7Cearn`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         throw new HttpException(
