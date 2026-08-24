@@ -1,5 +1,5 @@
-// Mock API toggle — set NEXT_PUBLIC_USE_MOCK_DATA=false in .env.local to use the real API
-export const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA !== 'false';
+// Mock API toggle — demo mode is opt-in via NEXT_PUBLIC_USE_MOCK_DATA=true
+export const USE_MOCK_DATA = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
 import {
   mockDashboardOverview,
@@ -63,6 +63,17 @@ import type {
 // Helper to simulate API delay
 const delay = (ms: number = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Mock stores mutate module-level arrays so create/update/delete stay visible
+// through subsequent getAll calls. Lists are handed out as fresh array copies,
+// but the items inside are live shared objects (no defensive item copies).
+function nextMockId(items: Array<{ id: string }>): string {
+  const max = items.reduce((acc, item) => {
+    const n = Number.parseInt(item.id, 10);
+    return Number.isNaN(n) ? acc : Math.max(acc, n);
+  }, 0);
+  return String(max + 1);
+}
+
 // Mock Dashboard API
 export const mockDashboardApi = {
   getOverview: async (): Promise<DashboardOverview> => {
@@ -79,7 +90,7 @@ export const mockDashboardApi = {
 export const mockStocksApi = {
   getAll: async (): Promise<Stock[]> => {
     await delay();
-    return mockStocks;
+    return [...mockStocks];
   },
   getOne: async (id: string): Promise<Stock> => {
     await delay();
@@ -94,21 +105,26 @@ export const mockStocksApi = {
   create: async (data: CreateStockInput): Promise<Stock> => {
     await delay();
     const newStock: Stock = {
-      id: String(mockStocks.length + 1),
+      id: nextMockId(mockStocks),
       ...data,
       currency: data.currency || 'USD',
       dividends: [],
     };
+    mockStocks.push(newStock);
     return newStock;
   },
   update: async (id: string, data: Partial<CreateStockInput>): Promise<Stock> => {
     await delay();
     const stock = mockStocks.find(s => s.id === id);
     if (!stock) throw new Error('Stock not found');
-    return { ...stock, ...data };
+    Object.assign(stock, data);
+    return stock;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockStocks.findIndex(s => s.id === id);
+    if (index === -1) throw new Error('Stock not found');
+    mockStocks.splice(index, 1);
   },
 };
 
@@ -116,7 +132,7 @@ export const mockStocksApi = {
 export const mockEurobondsApi = {
   getAll: async (): Promise<Eurobond[]> => {
     await delay();
-    return mockEurobonds;
+    return [...mockEurobonds];
   },
   getOne: async (id: string): Promise<Eurobond> => {
     await delay();
@@ -131,22 +147,27 @@ export const mockEurobondsApi = {
   create: async (data: CreateEurobondInput): Promise<Eurobond> => {
     await delay();
     const newEurobond: Eurobond = {
-      id: String(mockEurobonds.length + 1),
+      id: nextMockId(mockEurobonds),
       ...data,
       currency: data.currency || 'USD',
       couponFrequency: data.couponFrequency || 2,
       couponPayments: [],
     };
+    mockEurobonds.push(newEurobond);
     return newEurobond;
   },
   update: async (id: string, data: Partial<CreateEurobondInput>): Promise<Eurobond> => {
     await delay();
     const eurobond = mockEurobonds.find(e => e.id === id);
     if (!eurobond) throw new Error('Eurobond not found');
-    return { ...eurobond, ...data };
+    Object.assign(eurobond, data);
+    return eurobond;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockEurobonds.findIndex(e => e.id === id);
+    if (index === -1) throw new Error('Eurobond not found');
+    mockEurobonds.splice(index, 1);
   },
 };
 
@@ -154,7 +175,7 @@ export const mockEurobondsApi = {
 export const mockEtfsApi = {
   getAll: async (): Promise<ETF[]> => {
     await delay();
-    return mockETFs;
+    return [...mockETFs];
   },
   getOne: async (id: string): Promise<ETF> => {
     await delay();
@@ -169,21 +190,26 @@ export const mockEtfsApi = {
   create: async (data: CreateETFInput): Promise<ETF> => {
     await delay();
     const newETF: ETF = {
-      id: String(mockETFs.length + 1),
+      id: nextMockId(mockETFs),
       ...data,
       currency: data.currency || 'USD',
       distributions: [],
     };
+    mockETFs.push(newETF);
     return newETF;
   },
   update: async (id: string, data: Partial<CreateETFInput>): Promise<ETF> => {
     await delay();
     const etf = mockETFs.find(e => e.id === id);
     if (!etf) throw new Error('ETF not found');
-    return { ...etf, ...data };
+    Object.assign(etf, data);
+    return etf;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockETFs.findIndex(e => e.id === id);
+    if (index === -1) throw new Error('ETF not found');
+    mockETFs.splice(index, 1);
   },
 };
 
@@ -210,21 +236,26 @@ export const mockIncomesApi = {
   create: async (data: CreateIncomeInput): Promise<Income> => {
     await delay();
     const newIncome: Income = {
-      id: String(mockIncomes.length + 1),
+      id: nextMockId(mockIncomes),
       ...data,
       currency: data.currency || 'USD',
       isRecurring: data.isRecurring || false,
     };
+    mockIncomes.push(newIncome);
     return newIncome;
   },
   update: async (id: string, data: Partial<CreateIncomeInput>): Promise<Income> => {
     await delay();
     const income = mockIncomes.find(i => i.id === id);
     if (!income) throw new Error('Income not found');
-    return { ...income, ...data };
+    Object.assign(income, data);
+    return income;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockIncomes.findIndex(i => i.id === id);
+    if (index === -1) throw new Error('Income not found');
+    mockIncomes.splice(index, 1);
   },
 };
 
@@ -251,21 +282,26 @@ export const mockExpensesApi = {
   create: async (data: CreateExpenseInput): Promise<Expense> => {
     await delay();
     const newExpense: Expense = {
-      id: String(mockExpenses.length + 1),
+      id: nextMockId(mockExpenses),
       ...data,
       currency: data.currency || 'USD',
       isRecurring: data.isRecurring || false,
     };
+    mockExpenses.push(newExpense);
     return newExpense;
   },
   update: async (id: string, data: Partial<CreateExpenseInput>): Promise<Expense> => {
     await delay();
     const expense = mockExpenses.find(e => e.id === id);
     if (!expense) throw new Error('Expense not found');
-    return { ...expense, ...data };
+    Object.assign(expense, data);
+    return expense;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockExpenses.findIndex(e => e.id === id);
+    if (index === -1) throw new Error('Expense not found');
+    mockExpenses.splice(index, 1);
   },
 };
 
@@ -273,7 +309,7 @@ export const mockExpensesApi = {
 export const mockCashApi = {
   getAll: async (): Promise<Cash[]> => {
     await delay();
-    return mockCash;
+    return [...mockCash];
   },
   getOne: async (id: string): Promise<Cash> => {
     await delay();
@@ -288,22 +324,27 @@ export const mockCashApi = {
   create: async (data: CreateCashInput): Promise<Cash> => {
     await delay();
     const newCash: Cash = {
-      id: String(mockCash.length + 1),
+      id: nextMockId(mockCash),
       ...data,
       currency: data.currency || 'USD',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    mockCash.push(newCash);
     return newCash;
   },
   update: async (id: string, data: Partial<CreateCashInput>): Promise<Cash> => {
     await delay();
     const cash = mockCash.find(c => c.id === id);
     if (!cash) throw new Error('Cash account not found');
-    return { ...cash, ...data, updatedAt: new Date().toISOString() };
+    Object.assign(cash, data, { updatedAt: new Date().toISOString() });
+    return cash;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockCash.findIndex(c => c.id === id);
+    if (index === -1) throw new Error('Cash account not found');
+    mockCash.splice(index, 1);
   },
 };
 
@@ -311,7 +352,7 @@ export const mockCashApi = {
 export const mockGoldApi = {
   getAll: async (): Promise<Gold[]> => {
     await delay();
-    return mockGold;
+    return [...mockGold];
   },
   getOne: async (id: string): Promise<Gold> => {
     await delay();
@@ -326,21 +367,26 @@ export const mockGoldApi = {
   create: async (data: CreateGoldInput): Promise<Gold> => {
     await delay();
     const newGold: Gold = {
-      id: String(mockGold.length + 1),
+      id: nextMockId(mockGold),
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    mockGold.push(newGold);
     return newGold;
   },
   update: async (id: string, data: Partial<CreateGoldInput>): Promise<Gold> => {
     await delay();
     const gold = mockGold.find(g => g.id === id);
     if (!gold) throw new Error('Gold holding not found');
-    return { ...gold, ...data, updatedAt: new Date().toISOString() };
+    Object.assign(gold, data, { updatedAt: new Date().toISOString() });
+    return gold;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockGold.findIndex(g => g.id === id);
+    if (index === -1) throw new Error('Gold holding not found');
+    mockGold.splice(index, 1);
   },
 };
 
@@ -348,7 +394,7 @@ export const mockGoldApi = {
 export const mockSilverApi = {
   getAll: async (): Promise<Silver[]> => {
     await delay();
-    return mockSilver;
+    return [...mockSilver];
   },
   getOne: async (id: string): Promise<Silver> => {
     await delay();
@@ -363,21 +409,26 @@ export const mockSilverApi = {
   create: async (data: CreateSilverInput): Promise<Silver> => {
     await delay();
     const newSilver: Silver = {
-      id: String(mockSilver.length + 1),
+      id: nextMockId(mockSilver),
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    mockSilver.push(newSilver);
     return newSilver;
   },
   update: async (id: string, data: Partial<CreateSilverInput>): Promise<Silver> => {
     await delay();
     const silver = mockSilver.find(s => s.id === id);
     if (!silver) throw new Error('Silver holding not found');
-    return { ...silver, ...data, updatedAt: new Date().toISOString() };
+    Object.assign(silver, data, { updatedAt: new Date().toISOString() });
+    return silver;
   },
-  delete: async (_id: string): Promise<void> => {
+  delete: async (id: string): Promise<void> => {
     await delay();
+    const index = mockSilver.findIndex(s => s.id === id);
+    if (index === -1) throw new Error('Silver holding not found');
+    mockSilver.splice(index, 1);
   },
 };
 

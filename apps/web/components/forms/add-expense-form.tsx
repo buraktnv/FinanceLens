@@ -22,7 +22,7 @@ export function AddExpenseForm({ onSuccess, onCancel }: AddExpenseFormProps) {
   const [formData, setFormData] = useState<CreateExpenseInput>({
     amount: 0,
     currency: "TRY",
-    category: "FOOD",
+    category: "GROCERIES",
     description: "",
     date: new Date().toISOString().slice(0, 10),
     isRecurring: false,
@@ -94,7 +94,7 @@ export function AddExpenseForm({ onSuccess, onCancel }: AddExpenseFormProps) {
           <SelectContent>
             <SelectItem value="RENT">Kira</SelectItem>
             <SelectItem value="UTILITIES">Faturalar</SelectItem>
-            <SelectItem value="FOOD">Market</SelectItem>
+            <SelectItem value="GROCERIES">Market</SelectItem>
             <SelectItem value="TRANSPORTATION">Ulasim</SelectItem>
             <SelectItem value="EDUCATION">Egitim</SelectItem>
             <SelectItem value="HEALTHCARE">Saglik</SelectItem>
@@ -178,7 +178,7 @@ export function AddExpenseForm({ onSuccess, onCancel }: AddExpenseFormProps) {
               <SelectItem value="WEEKLY">Haftalik</SelectItem>
               <SelectItem value="MONTHLY">Aylik</SelectItem>
               <SelectItem value="QUARTERLY">3 Aylik</SelectItem>
-              <SelectItem value="SEMI_ANNUAL">6 Aylik</SelectItem>
+              <SelectItem value="SEMIANNUAL">6 Aylik</SelectItem>
               <SelectItem value="ANNUAL">Yillik</SelectItem>
             </SelectContent>
           </Select>
