@@ -1,9 +1,63 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  FxPair,
+  YahooFinanceService,
+} from '../yahoo-finance/yahoo-finance.service';
+
+interface PairRate {
+  rate: number;
+  fetchedAt: string | null;
+}
+
+type FxRates = Record<FxPair, PairRate>;
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private yahooFinance: YahooFinanceService,
+  ) {}
+
+  /**
+   * Fetch USDTRY/EURTRY rates; on upstream failure fall back to rate=1
+   * and flag the overview as stale instead of failing the request.
+   */
+  private async fetchFxRates(): Promise<{ rates: FxRates; stale: boolean }> {
+    const [usdTry, eurTry] = await Promise.all(
+      (['USDTRY', 'EURTRY'] as const).map(async (pair): Promise<PairRate> => {
+        try {
+          const { rate, fetchedAt } = await this.yahooFinance.getFxRate(pair);
+          return { rate, fetchedAt };
+        } catch {
+          return { rate: 1, fetchedAt: null };
+        }
+      }),
+    );
+
+    return {
+      rates: { USDTRY: usdTry, EURTRY: eurTry },
+      stale: usdTry.fetchedAt === null || eurTry.fetchedAt === null,
+    };
+  }
+
+  private latestFetchedAt(rates: FxRates): string | null {
+    const timestamps = Object.values(rates)
+      .map((r) => r.fetchedAt)
+      .filter((t): t is string => t !== null)
+      .sort();
+    return timestamps.length > 0 ? timestamps[timestamps.length - 1] : null;
+  }
+
+  /**
+   * Per-item currency drives the TRY multiplier:
+   * USD -> xUSDTRY, EUR -> xEURTRY, anything else (incl. TRY) -> x1.
+   */
+  private toTry(value: number, currency: string, rates: FxRates): number {
+    if (currency === 'USD') return value * rates.USDTRY.rate;
+    if (currency === 'EUR') return value * rates.EURTRY.rate;
+    return value;
+  }
 
   async getOverview(userId: string) {
     const [
@@ -16,6 +70,7 @@ export class DashboardService {
       incomes,
       expenses,
       loans,
+      fx,
     ] = await Promise.all([
       this.prisma.stock.findMany({ where: { userId } }),
       this.prisma.eTF.findMany({ where: { userId } }),
@@ -26,27 +81,47 @@ export class DashboardService {
       this.getMonthlyIncomes(userId),
       this.getMonthlyExpenses(userId),
       this.prisma.loan.findMany({ where: { userId, status: 'ACTIVE' } }),
+      this.fetchFxRates(),
     ]);
+    const { rates: fxRates, stale } = fx;
 
-    // Calculate stock values
+    // Calculate stock values (converted to TRY by row currency)
     const stocksValue = stocks.reduce(
-      (sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice),
+      (sum, s) =>
+        sum +
+        this.toTry(
+          Number(s.quantity) * Number(s.purchasePrice),
+          s.currency as string,
+          fxRates,
+        ),
       0,
     );
 
-    // Calculate ETF values
+    // Calculate ETF values (converted to TRY by row currency)
     const etfsValue = etfs.reduce(
-      (sum, e) => sum + Number(e.quantity) * Number(e.purchasePrice),
+      (sum, e) =>
+        sum +
+        this.toTry(
+          Number(e.quantity) * Number(e.purchasePrice),
+          e.currency as string,
+          fxRates,
+        ),
       0,
     );
 
-    // Calculate Eurobond values (face value * quantity)
+    // Calculate Eurobond values (face value * quantity, converted to TRY)
     const eurobondsValue = eurobonds.reduce(
-      (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
+      (sum, e) =>
+        sum +
+        this.toTry(
+          Number(e.faceValue) * Number(e.quantity),
+          e.currency as string,
+          fxRates,
+        ),
       0,
     );
 
-    // Calculate cash total (sum all balances for now - no currency conversion yet)
+    // Calculate cash total (TRY-native, no conversion)
     const cashValue = cash.reduce((sum, c) => sum + Number(c.balance), 0);
 
     // Calculate gold value (just purchase cost for now - current market price will be fetched on frontend)
@@ -102,6 +177,12 @@ export class DashboardService {
               ).toFixed(1)
             : 0,
       },
+      fxRates: {
+        USDTRY: fxRates.USDTRY.rate,
+        EURTRY: fxRates.EURTRY.rate,
+        fetchedAt: this.latestFetchedAt(fxRates),
+      },
+      ...(stale ? { stale: true } : {}),
     };
   }
 
