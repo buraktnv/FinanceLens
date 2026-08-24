@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Wallet } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { NavBar } from "@/components/landing/nav-bar";
 import { Hero } from "@/components/landing/hero";
@@ -26,7 +27,15 @@ export default function LandingPage() {
   const handleDemoLogin = () => {
     if (demoLoading) return;
     setDemoLoading(true);
-    signInAsDemo();
+    try {
+      signInAsDemo();
+    } catch {
+      // localStorage may throw (private mode / storage disabled) — never
+      // leave the button stuck in its loading state.
+      toast.error("Demo başlatılamadı");
+    } finally {
+      setDemoLoading(false);
+    }
   };
 
   if (loading) {

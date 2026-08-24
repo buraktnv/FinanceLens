@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Wallet,
   LayoutDashboard,
@@ -76,12 +75,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, signOut, isDemo } = useAuth();
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
+  const handleSignOut = () => {
+    // signOut() routes to /login in both demo and Supabase paths.
+    void signOut();
   };
 
   const toggleTheme = () => {
