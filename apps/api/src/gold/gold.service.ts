@@ -63,7 +63,10 @@ export class GoldService {
     if (updated.count === 0)
       throw new NotFoundException('Gold holding not found');
 
-    return this.prisma.gold.findUnique({ where: { id } });
+    const gold = await this.prisma.gold.findUnique({ where: { id } });
+    if (!gold) throw new NotFoundException('Gold holding not found');
+
+    return gold;
   }
 
   async remove(userId: string, id: string): Promise<void> {

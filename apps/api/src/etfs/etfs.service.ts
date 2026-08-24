@@ -77,10 +77,13 @@ export class EtfsService {
     });
     if (updated.count === 0) throw new NotFoundException('ETF not found');
 
-    return this.prisma.eTF.findUnique({
+    const etf = await this.prisma.eTF.findUnique({
       where: { id },
       include: { distributions: true },
     });
+    if (!etf) throw new NotFoundException('ETF not found');
+
+    return etf;
   }
 
   async remove(userId: string, id: string): Promise<void> {

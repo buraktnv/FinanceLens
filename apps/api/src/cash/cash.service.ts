@@ -59,7 +59,10 @@ export class CashService {
     if (updated.count === 0)
       throw new NotFoundException('Cash account not found');
 
-    return this.prisma.cash.findUnique({ where: { id } });
+    const cash = await this.prisma.cash.findUnique({ where: { id } });
+    if (!cash) throw new NotFoundException('Cash account not found');
+
+    return cash;
   }
 
   async remove(userId: string, id: string): Promise<void> {

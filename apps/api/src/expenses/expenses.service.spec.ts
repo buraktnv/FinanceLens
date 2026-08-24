@@ -169,6 +169,15 @@ describe('ExpensesService', () => {
         service.update(userId, 'missing-expense', {}),
       ).rejects.toThrow(new NotFoundException('Expense not found'));
     });
+
+    it('should throw NotFoundException when the expense is deleted after a successful update', async () => {
+      prismaService.expense.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.expense.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update(userId, expenseId, { amount: 100 }),
+      ).rejects.toThrow(new NotFoundException('Expense not found'));
+    });
   });
 
   describe('remove', () => {

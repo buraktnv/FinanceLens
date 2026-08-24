@@ -63,7 +63,10 @@ export class SilverService {
     if (updated.count === 0)
       throw new NotFoundException('Silver holding not found');
 
-    return this.prisma.silver.findUnique({ where: { id } });
+    const silver = await this.prisma.silver.findUnique({ where: { id } });
+    if (!silver) throw new NotFoundException('Silver holding not found');
+
+    return silver;
   }
 
   async remove(userId: string, id: string): Promise<void> {

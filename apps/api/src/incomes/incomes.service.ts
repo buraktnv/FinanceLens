@@ -91,10 +91,13 @@ export class IncomesService {
     });
     if (updated.count === 0) throw new NotFoundException('Income not found');
 
-    return this.prisma.income.findUnique({
+    const income = await this.prisma.income.findUnique({
       where: { id },
       include: { property: true },
     });
+    if (!income) throw new NotFoundException('Income not found');
+
+    return income;
   }
 
   async remove(userId: string, id: string): Promise<void> {

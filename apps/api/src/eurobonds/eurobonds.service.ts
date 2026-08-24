@@ -83,10 +83,13 @@ export class EurobondsService {
     });
     if (updated.count === 0) throw new NotFoundException('Eurobond not found');
 
-    return this.prisma.eurobond.findUnique({
+    const eurobond = await this.prisma.eurobond.findUnique({
       where: { id },
       include: { couponPayments: true },
     });
+    if (!eurobond) throw new NotFoundException('Eurobond not found');
+
+    return eurobond;
   }
 
   async remove(userId: string, id: string): Promise<void> {

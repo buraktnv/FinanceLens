@@ -75,10 +75,13 @@ export class StocksService {
     });
     if (updated.count === 0) throw new NotFoundException('Stock not found');
 
-    return this.prisma.stock.findUnique({
+    const stock = await this.prisma.stock.findUnique({
       where: { id },
       include: { dividends: true },
     });
+    if (!stock) throw new NotFoundException('Stock not found');
+
+    return stock;
   }
 
   async remove(userId: string, id: string): Promise<void> {

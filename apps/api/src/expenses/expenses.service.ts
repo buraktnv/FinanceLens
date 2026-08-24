@@ -99,10 +99,13 @@ export class ExpensesService {
     });
     if (updated.count === 0) throw new NotFoundException('Expense not found');
 
-    return this.prisma.expense.findUnique({
+    const expense = await this.prisma.expense.findUnique({
       where: { id },
       include: { property: true },
     });
+    if (!expense) throw new NotFoundException('Expense not found');
+
+    return expense;
   }
 
   async remove(userId: string, id: string): Promise<void> {

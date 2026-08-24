@@ -184,6 +184,15 @@ describe('StocksService', () => {
       expect(prismaService.stock.findUnique).not.toHaveBeenCalled();
     });
 
+    it('should throw NotFoundException when the stock is deleted after a successful update', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.stock.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update(userId, stockId, updateStockDto),
+      ).rejects.toThrow(new NotFoundException('Stock not found'));
+    });
+
     it('should throw NotFoundException when the stock does not exist', async () => {
       prismaService.stock.updateMany.mockResolvedValue({ count: 0 });
 
