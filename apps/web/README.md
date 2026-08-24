@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# FinanceLens Web (`apps/web`)
+
+Next.js 16 frontend for FinanceLens — React 19, Tailwind CSS v4, ShadcnUI, TanStack Query.
+Runs on **port 3000**.
 
 ## Getting Started
 
-First, run the development server:
+From the repo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp apps/web/.env.example apps/web/.env.local
+pnpm dev --filter=web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment Variables (`.env.local`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_API_URL` | Backend base URL (default `http://localhost:3001/api`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL — required for auth |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key — required for auth |
+| `NEXT_PUBLIC_USE_MOCK_DATA` | `"true"` enables demo mode on mock data (default off) |
 
-## Learn More
+Demo mode lets you explore the full UI without running the API. See the root
+[MOCK_DATA_GUIDE.md](../../MOCK_DATA_GUIDE.md).
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev --filter=web      # dev server on :3000
+pnpm build --filter=web    # production build
+pnpm lint --filter=web     # ESLint (--max-warnings 0)
+pnpm check-types --filter=web  # next typegen + tsc --noEmit
+pnpm test --filter=web     # Vitest unit tests (formatters, mock layer, chart data)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Structure
 
-## Deploy on Vercel
+- `app/` — App Router pages: `/`, `/login`, `/register`, `/dashboard/*`, `/status`
+- `components/` — ShadcnUI primitives (`ui/`) and feature components
+- `lib/` — API client (`api.ts`), demo mode (`api-mock.ts`, `mock-data.ts`),
+  formatters (`format.ts`), auth context (`auth.tsx`), Supabase clients
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+UI text is Turkish (tr-TR); all currency/date formatting goes through `lib/format.ts`.
