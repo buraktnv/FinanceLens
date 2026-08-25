@@ -47,7 +47,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const incomeTypes: Record<string, { label: string; color: string }> = {
   SALARY: { label: "Salary", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
-  RENTAL: { label: "Rental", color: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" },
+  RENTAL: { label: "Rental", color: "bg-primary/15 text-primary-strong" },
   DIVIDEND: { label: "Dividend", color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
   INTEREST: { label: "Interest", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
   FREELANCE: { label: "Freelance", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },

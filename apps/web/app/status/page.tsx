@@ -140,7 +140,7 @@ export default function StatusPage() {
                 <p className="text-2xl sm:text-3xl font-bold text-blue-600 tabular-nums">{monthsOfSavings} Months</p>
                 <p className="text-xs text-muted-foreground">At {formatCurrency(monthlyExpenses)}/mo expenses</p>
               </div>
-              <div className="text-center p-3 sm:p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10">
+              <div className="text-center p-3 sm:p-4 rounded-lg border border-primary/20 bg-primary/10">
                 <p className="text-xs sm:text-sm text-muted-foreground mb-1">Monthly Savings</p>
                 <p className="text-2xl sm:text-3xl font-bold text-green-600 tabular-nums">{formatCurrency(monthlySavings)}</p>
                 <p className="text-xs text-muted-foreground">{formatPercent(savingsRate)} of income</p>
