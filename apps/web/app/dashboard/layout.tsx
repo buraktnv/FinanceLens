@@ -25,6 +25,7 @@ import {
   AssistantProvider,
   useAssistant,
 } from "@/components/assistant/provider";
+import { AssistantSheet } from "@/components/assistant/sheet";
 
 const sidebarLinks = [
   {
@@ -200,6 +201,7 @@ export default function DashboardLayout({
 
       {/* Mobile Bottom Navigation — floating neon pill with assistant CTA */}
       <MobileNav links={[...sidebarLinks, { title: "Status", href: "/status", icon: FileText }]} />
+      <AssistantSheet />
 
       {/* Main content */}
       <main className="lg:pl-64 pt-16 lg:pt-0 pb-24 lg:pb-0">

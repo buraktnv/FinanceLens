@@ -36,7 +36,7 @@ describe("matchHistory", () => {
       realReturnPct: -5,
       currencyVolatility: "high",
     });
-    expect(matches[0].event.type === "crisis" || matches[0].event.type === "stagflation").toBe(true);
+    expect(matches[0]!.event.type === "crisis" || matches[0]!.event.type === "stagflation").toBe(true);
     expect(matches.length).toBeLessThanOrEqual(3);
   });
 
@@ -46,7 +46,7 @@ describe("matchHistory", () => {
       realReturnPct: 0,
       currencyVolatility: "high",
     });
-    expect(matches[0].event.region).toBe("TR");
+    expect(matches[0]!.event.region).toBe("TR");
   });
 
   it("prefers booms when real returns are strongly positive and volatility low", () => {
@@ -55,7 +55,7 @@ describe("matchHistory", () => {
       realReturnPct: 12,
       currencyVolatility: "low",
     });
-    expect(matches[0].event.type).toBe("boom");
+    expect(matches[0]!.event.type).toBe("boom");
   });
 
   it("scores are sorted descending and limited", () => {
@@ -65,7 +65,7 @@ describe("matchHistory", () => {
       currencyVolatility: "high",
     }, 5);
     for (let i = 1; i < matches.length; i++) {
-      expect(matches[i - 1].score).toBeGreaterThanOrEqual(matches[i].score);
+      expect(matches[i - 1]!.score).toBeGreaterThanOrEqual(matches[i]!.score);
     }
     expect(matches.length).toBeLessThanOrEqual(5);
   });

@@ -24,25 +24,25 @@ function normalize(text: string): string {
 function parseAmount(text: string): number | null {
   const kMatch = text.match(/(\d+(?:[.,]\d+)?)\s*k\b/);
   if (kMatch) {
-    return Math.round(parseFloat(kMatch[1].replace(",", ".")) * 1000);
+    return Math.round(parseFloat(kMatch[1]?.replace(",", ".") ?? "0") * 1000);
   }
   const binMatch = text.match(/(\d+)\s*bin/);
   if (binMatch) {
-    return parseInt(binMatch[1], 10) * 1000;
+    return parseInt(binMatch[1] ?? "0", 10) * 1000;
   }
   const plain = text.match(/(\d{3,7})\s*(?:tl|lira|liras?)/);
   if (plain) {
-    return parseInt(plain[1], 10);
+    return parseInt(plain[1] ?? "0", 10);
   }
   const bare = text.match(/\b(\d{4,7})\b/);
-  return bare ? parseInt(bare[1], 10) : null;
+  return bare ? parseInt(bare[1] ?? "0", 10) : null;
 }
 
 /** Extracts a percentage from patterns like "%20", "%20 dusse", "yariya". */
 function parsePercent(text: string): number | null {
   if (/yari(ya|sina)?|%50/.test(text)) return 50;
   const pct = text.match(/%\s*(\d{1,2})/);
-  return pct ? Math.min(parseInt(pct[1], 10), 90) : null;
+  return pct ? Math.min(parseInt(pct[1] ?? "0", 10), 90) : null;
 }
 
 const CRISIS_YEARS = ["2008", "2001", "1994", "2018", "2020", "1987"];

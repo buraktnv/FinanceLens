@@ -31,15 +31,15 @@ describe("projectFire", () => {
     const r = projectFire(base, assumptions);
     const realMonthly = Math.pow(1.30 / 1.25, 1 / 12) - 1;
     const second = base.netWorthTRY * (1 + realMonthly) + 5_000;
-    expect(r.series[1].portfolioTRY).toBeCloseTo(second, 4);
-    expect(r.series[0].portfolioTRY).toBe(base.netWorthTRY);
+    expect(r.series[1]!.portfolioTRY).toBeCloseTo(second, 4);
+    expect(r.series[0]!.portfolioTRY).toBe(base.netWorthTRY);
   });
 
   it("emits ISO dates in month increments", () => {
     const r = projectFire(base, assumptions);
-    expect(new Date(r.series[0].dateISO).getUTCFullYear()).toBeGreaterThan(2000);
-    const a = new Date(r.series[3].dateISO);
-    const b = new Date(r.series[4].dateISO);
+    expect(new Date(r.series[0]!.dateISO).getUTCFullYear()).toBeGreaterThan(2000);
+    const a = new Date(r.series[3]!.dateISO);
+    const b = new Date(r.series[4]!.dateISO);
     expect((b.getTime() - a.getTime()) / 86_400_000).toBeCloseTo(30.44, 0);
   });
 
@@ -58,7 +58,7 @@ describe("projectFire", () => {
       { netWorthTRY: -100_000, monthlySavings: 5_000, monthlyExpenses: 20_000 },
       assumptions,
     );
-    expect(r.series[0].portfolioTRY).toBe(-100_000);
+    expect(r.series[0]!.portfolioTRY).toBe(-100_000);
     expect(r.fireDateISO).not.toBeNull();
   });
 
