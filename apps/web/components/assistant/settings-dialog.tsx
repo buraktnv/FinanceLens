@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -15,26 +16,119 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { useAssistant } from "./provider";
 import {
+  fetchOpenRouterModels,
   PROVIDER_DEFAULT_MODELS,
+  type OpenRouterModelOption,
   type ProviderId,
 } from "@/lib/assistant/providers";
 
-const MODEL_SUGGESTIONS: Record<ProviderId, string[]> = {
-  openai: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"],
-  gemini: ["gemini-1.5-flash", "gemini-1.5-pro"],
-  claude: ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest"],
-  openrouter: [
-    "openrouter/free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "qwen/qwen-2.5-72b-instruct:free",
+const MODEL_OPTIONS: Record<Exclude<ProviderId, "openrouter">, { id: string; label: string }[]> = {
+  openai: [
+    { id: "gpt-4o-mini", label: "GPT-4o mini (hızlı, ucuz)" },
+    { id: "gpt-4o", label: "GPT-4o" },
+    { id: "gpt-4.1-mini", label: "GPT-4.1 mini" },
+    { id: "gpt-4.1", label: "GPT-4.1 (en güçlü)" },
+  ],
+  gemini: [
+    { id: "gemini-1.5-flash", label: "Gemini 1.5 Flash (hızlı)" },
+    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+    { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro (güçlü)" },
+  ],
+  claude: [
+    { id: "claude-3-5-haiku-latest", label: "Claude Haiku 3.5 (hızlı)" },
+    { id: "claude-3-5-sonnet-latest", label: "Claude Sonnet 3.5 (güçlü)" },
   ],
 };
+
+function ModelSelect({
+  provider,
+  value,
+  onChange,
+}: {
+  provider: ProviderId;
+  value: string;
+  onChange: (model: string) => void;
+}) {
+  const isRouter = provider === "openrouter";
+  const { data: routerModels, isFetching } = useQuery({
+    queryKey: ["openrouter-models"],
+    queryFn: ({ signal }) => fetchOpenRouterModels(signal),
+    enabled: isRouter,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Ensure the currently stored model is always a visible option.
+  const ensureOption = (list: OpenRouterModelOption[]): OpenRouterModelOption[] =>
+    list.some((m) => m.id === value)
+      ? list
+      : [{ id: value, name: value, free: false }, ...list];
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="assistant-model">Model</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id="assistant-model">
+          <SelectValue placeholder={isRouter ? "Modeller yükleniyor…" : "Model seç"} />
+        </SelectTrigger>
+        <SelectContent>
+          {!isRouter &&
+            MODEL_OPTIONS[provider].map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.label}
+              </SelectItem>
+            ))}
+
+          {isRouter && (
+            <>
+              {(routerModels ?? []).filter((m) => m.free).length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Ücretsiz modeller</SelectLabel>
+                  {ensureOption(
+                    (routerModels ?? []).filter((m) => m.free),
+                  ).map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
+              {(routerModels ?? []).filter((m) => !m.free).length > 0 && (
+                <SelectGroup>
+                  <SelectLabel>Popüler (ücretli)</SelectLabel>
+                  {(routerModels ?? [])
+                    .filter((m) => !m.free)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                </SelectGroup>
+              )}
+              {isFetching && !routerModels && (
+                <div className="px-3 py-2 text-xs text-muted-foreground">
+                  Katalog yükleniyor…
+                </div>
+              )}
+            </>
+          )}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        {isRouter
+          ? "Katalog canlı olarak OpenRouter'dan çekilir; ücretsiz modeller üsttedir."
+          : "Sağlayıcının önerilen modelleri."}
+      </p>
+    </div>
+  );
+}
 
 export function AssistantSettingsDialog({
   open,
@@ -127,26 +221,11 @@ export function AssistantSettingsDialog({
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="assistant-model">Model</Label>
-            <Input
-              id="assistant-model"
-              list="assistant-model-options"
-              value={draft.model}
-              onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-              placeholder={PROVIDER_DEFAULT_MODELS[draft.provider]}
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <datalist id="assistant-model-options">
-              {(MODEL_SUGGESTIONS[draft.provider] ?? []).map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
-            <p className="text-xs text-muted-foreground">
-              Serbest metin — sağlayıcının model kimliğini yazabilirsin.
-            </p>
-          </div>
+          <ModelSelect
+            provider={draft.provider}
+            value={draft.model}
+            onChange={(model) => setDraft({ ...draft, model })}
+          />
 
           <div className="space-y-1.5">
             <Label htmlFor="assistant-key">API anahtarı</Label>

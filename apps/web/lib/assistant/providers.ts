@@ -11,6 +11,103 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderId, string> = {
   openrouter: "openrouter/free",
 };
 
+export interface OpenRouterModelOption {
+  id: string;
+  name: string;
+  free: boolean;
+}
+
+interface OpenRouterModelsResponse {
+  data?: Array<{
+    id?: string;
+    name?: string;
+    context_length?: number;
+    pricing?: { prompt?: string };
+  }>;
+}
+
+const MODEL_LIST_TTL_MS = 10 * 60 * 1000;
+let modelListCache: {
+  at: number;
+  options: OpenRouterModelOption[];
+} | null = null;
+
+/**
+ * Live catalog of OpenRouter models (public endpoint, no key needed).
+ * Returns free models (largest context first, capped) plus popular paid
+ * picks when available. Falls back to sensible seeds if upstream fails,
+ * so the settings dialog never renders an empty picker.
+ */
+export async function fetchOpenRouterModels(
+  signal?: AbortSignal,
+): Promise<OpenRouterModelOption[]> {
+  if (modelListCache && Date.now() - modelListCache.at < MODEL_LIST_TTL_MS) {
+    return modelListCache.options;
+  }
+
+  let options: OpenRouterModelOption[];
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/models", {
+      signal: signal ?? AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(String(res.status));
+    const json = (await res.json()) as OpenRouterModelsResponse;
+
+    const models = (json.data ?? []).filter(
+      (m): m is { id: string; name: string; context_length?: number; pricing?: { prompt?: string } } =>
+        typeof m.id === "string" && m.id.length > 0,
+    );
+
+    const toOption = (m: (typeof models)[number]): OpenRouterModelOption => ({
+      id: m.id,
+      name: m.name ?? m.id,
+      free: m.pricing?.prompt === "0" || m.id.endsWith(":free"),
+    });
+
+    const free = models
+      .map(toOption)
+      .filter((m) => m.free)
+      .sort((a, b) => b.id.length - a.id.length || a.name.localeCompare(b.name))
+      .slice(0, 30);
+
+    const popularIds = [
+      "openai/gpt-4o-mini",
+      "anthropic/claude-3.5-sonnet",
+      "google/gemini-flash-1.5",
+      "meta-llama/llama-3.1-70b-instruct",
+      "mistralai/mistral-small",
+    ];
+    const popular = models
+      .filter((m) => popularIds.includes(m.id))
+      .map(toOption)
+      .filter((m) => !m.free);
+
+    options =
+      free.length > 0 || popular.length > 0
+        ? [...free, ...popular]
+        : FALLBACK_OPENROUTER_MODELS;
+  } catch {
+    options = FALLBACK_OPENROUTER_MODELS;
+  }
+
+  modelListCache = { at: Date.now(), options };
+  return options;
+}
+
+export function clearOpenRouterModelsCache(): void {
+  modelListCache = null;
+}
+
+/** Seeds used only when the live catalog cannot be reached. */
+export const FALLBACK_OPENROUTER_MODELS: OpenRouterModelOption[] = [
+  { id: "openrouter/free", name: "Free Models Router (otomatik)", free: true },
+  {
+    id: "meta-llama/llama-3.2-3b-instruct:free",
+    name: "Llama 3.2 3B Instruct (free)",
+    free: true,
+  },
+];
+
 interface NarrateOptions {
   provider: ProviderId;
   apiKey: string;

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { narrate, type ProviderId } from "../providers";
+import {
+  clearOpenRouterModelsCache,
+  fetchOpenRouterModels,
+  narrate,
+  type ProviderId,
+} from "../providers";
 
 const KEY = "test-key-123";
 
@@ -166,5 +171,59 @@ describe("narrate", () => {
 
     const [, init] = (f.mock.calls[0] ?? []) as [string, RequestInit];
     expect(JSON.parse(String(init.body)).model).toBe("openrouter/free");
+  });
+});
+
+describe("fetchOpenRouterModels", () => {
+  afterEach(() => {
+    clearOpenRouterModelsCache();
+    vi.unstubAllGlobals();
+  });
+
+  it("filters free models and appends popular paid picks", async () => {
+    clearOpenRouterModelsCache();
+    vi.stubGlobal(
+      "fetch",
+      mockFetch(200, {
+        data: [
+          { id: "openai/gpt-4o-mini", name: "GPT-4o mini", pricing: { prompt: "0.00000015" } },
+          { id: "qwen/qwen-2.5-72b-instruct:free", name: "Qwen 72B (free)", pricing: { prompt: "0" } },
+          { id: "meta-llama/llama-3.2-3b-instruct:free", name: "Llama 3.2 (free)", pricing: {} },
+          { id: "mistralai/mistral-small", name: "Mistral Small", pricing: { prompt: "0.000002" } },
+        ],
+      }),
+    );
+
+    const options = await fetchOpenRouterModels();
+
+    const free = options.filter((o) => o.free).map((o) => o.id);
+    expect(free).toContain("qwen/qwen-2.5-72b-instruct:free");
+    expect(free).toContain("meta-llama/llama-3.2-3b-instruct:free");
+    expect(free).not.toContain("openai/gpt-4o-mini");
+
+    const paid = options.filter((o) => !o.free).map((o) => o.id);
+    expect(paid).toContain("openai/gpt-4o-mini");
+    expect(paid).not.toContain("qwen/qwen-2.5-72b-instruct:free");
+  });
+
+  it("falls back to seed models when upstream fails", async () => {
+    clearOpenRouterModelsCache();
+    vi.stubGlobal("fetch", mockFetch(500, {}));
+    const options = await fetchOpenRouterModels();
+    expect(options.some((o) => o.id === "openrouter/free")).toBe(true);
+  });
+
+  it("serves a second call from cache without refetching", async () => {
+    clearOpenRouterModelsCache();
+    const f = mockFetch(200, {
+      data: [{ id: "test/model:free", name: "Test (free)", pricing: { prompt: "0" } }],
+    });
+    vi.stubGlobal("fetch", f);
+
+    await fetchOpenRouterModels();
+    await fetchOpenRouterModels();
+
+    expect(f).toHaveBeenCalledTimes(1);
+    clearOpenRouterModelsCache();
   });
 });
