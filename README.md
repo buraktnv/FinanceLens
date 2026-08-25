@@ -26,10 +26,11 @@ kâr/zarar takibi ve TRY bazında normalize edilmiş net değerle.
 - **Cash accounts** — multi-currency balances normalized to TRY via live FX rates
 - **Income & Expenses** — recurring income support, categorized spending with payment-method filters
 - **Dashboard** — net worth, allocation donut, expense-category charts, savings rate, monthly cash flow; every non-TRY amount is FX-normalized and surfaced with staleness `warnings`
+- **AI Finans Asistanı** — floating assistant on every dashboard page: deterministic FIRE projection engine ("ayda 15k biriktirirsem ne zaman özgür olurum?"), what-if scenarios, historical stress tests against a curated TR/US/global crisis dataset, and optional LLM-powered narration using your own API key (never stored server-side)
 - **Status page** — runway calculation and savings projections across all assets
 - **Demo mode** — run the entire UI on in-memory mock data (`NEXT_PUBLIC_USE_MOCK_DATA=true`), no backend required
 - **Auth** — Supabase JWT with a global `AuthGuard` (all API routes protected by default)
-- **Dark mode** — semantic design tokens with an emerald brand palette, system preference detection
+- **Dark mode** — semantic design tokens with a neon mint/gold/orange brand palette, system preference detection
 - **Turkish-first UI** — tr-TR locale, ₺ currency, DD.MM.YYYY dates via a shared formatter library
 - **Type-safe end to end** — Prisma types shared between web and API; all incoming API payloads validated by `class-validator` DTOs
 

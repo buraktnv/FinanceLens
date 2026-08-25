@@ -116,9 +116,16 @@ The only public route is `GET /api` (health).
   surface needs a matching mock function; keep enum values identical to Prisma's.
 - **Auth on the API** — Routes are protected by default; opt out only for genuinely public endpoints
   with `@Public()` (from `apps/api/src/auth`). Get the user id via the `@User()` decorator.
-- **UI** — ShadcnUI components in `apps/web/components/ui`, semantic color tokens (emerald brand +
-  status colors) defined in `globals.css`; use tokens, not raw hex. Lucide icons only.
+- **UI** — ShadcnUI components in `apps/web/components/ui`, semantic color tokens (neon mint/gold/orange
+  brand + status colors) defined in `globals.css`; use tokens, not raw hex. Lucide icons only.
 - **Language** — The product UI is Turkish (tr-TR). Code identifiers, comments, and most docs are English.
+- **AI assistant** — lives in `apps/web/lib/assistant/*` (engine, history datasets, intent router,
+  providers) and `apps/web/components/assistant/*` (UI). All numbers come from the deterministic
+  engine (`projectFire`); the LLM (`narrate`, BYO key via `x-assistant-key` header to
+  `/api/assistant`) only rephrases engine output and never invents numbers. Keep that split intact.
+- **Brand palette** — primary mint `#70FFD2`, accent orange `#FF9137`, warning gold `#FFCC4D`,
+  highlight yellow `#FFFC8C`. In light mode use `primary-strong` for mint-colored text (contrast);
+  mint fills always carry dark foreground.
 
 ## CI
 
