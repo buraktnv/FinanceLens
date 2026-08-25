@@ -157,10 +157,9 @@ export function buildNarrationUserPrompt(
  */
 export function sanitizeLlmText(text: string): string {
   return text
-    .replace(
-      /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu,
-      "",
-    )
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/gu, "")
+    .replace(/\uFE0F/g, "")
+    .replace(/\u200D/g, "")
     .replace(/\s*[—–]\s*/g, ", ")
     .replace(/ {2,}/g, " ")
     .trim();
