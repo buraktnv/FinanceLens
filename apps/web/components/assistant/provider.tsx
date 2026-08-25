@@ -17,7 +17,7 @@ export interface AssistantSettings {
 
 const DEFAULT_SETTINGS: AssistantSettings = {
   apiKey: "",
-  provider: "openai",
+  provider: "openrouter",
   annualReturnPct: 30,
   annualInflationPct: 25,
 };
@@ -40,7 +40,7 @@ function loadSettings(): AssistantSettings {
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<AssistantSettings>;
     const provider =
-      parsed.provider && ["openai", "gemini", "claude"].includes(parsed.provider)
+      parsed.provider && ["openai", "gemini", "claude", "openrouter"].includes(parsed.provider)
         ? (parsed.provider as ProviderId)
         : DEFAULT_SETTINGS.provider;
     return {

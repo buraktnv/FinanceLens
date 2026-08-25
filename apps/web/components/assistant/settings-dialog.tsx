@@ -97,6 +97,7 @@ export function AssistantSettingsDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="openrouter">OpenRouter (ücretsiz modeller)</SelectItem>
                 <SelectItem value="openai">OpenAI</SelectItem>
                 <SelectItem value="gemini">Google Gemini</SelectItem>
                 <SelectItem value="claude">Anthropic Claude</SelectItem>

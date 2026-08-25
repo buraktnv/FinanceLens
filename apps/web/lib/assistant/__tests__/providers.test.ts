@@ -85,6 +85,30 @@ describe("narrate", () => {
     expect(call.headers["x-api-key"]).toBe(KEY);
   });
 
+  it("calls OpenRouter free router with bearer auth and openai-compatible shape", async () => {
+    const f = mockFetch(200, {
+      choices: [{ message: { content: "OpenRouter cevap" } }],
+    });
+    vi.stubGlobal("fetch", f);
+
+    const reply = await narrate({
+      provider: "openrouter",
+      apiKey: KEY,
+      systemPrompt: "sistem",
+      userPrompt: "kullanici",
+    });
+
+    expect(reply).toBe("OpenRouter cevap");
+    const [url = "", init] = (f.mock.calls[0] ?? []) as [{ toString(): string }, RequestInit];
+    const call = { url: String(url), headers: (init.headers ?? {}) as Record<string, string>, body: String(init.body ?? "{}") };
+    expect(call.url).toBe("https://openrouter.ai/api/v1/chat/completions");
+    expect(call.headers.Authorization).toBe(`Bearer ${KEY}`);
+    expect(call.headers["X-Title"]).toBe("FinanceLens");
+    const parsed = JSON.parse(call.body);
+    expect(parsed.model).toBe("openrouter/free");
+    expect(parsed.messages).toHaveLength(2);
+  });
+
   it("throws sanitized error on upstream failure (no key leakage)", async () => {
     vi.stubGlobal("fetch", mockFetch(401, { error: { message: `bad key ${KEY}` } }));
     await expect(

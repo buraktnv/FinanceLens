@@ -1,6 +1,6 @@
-export type ProviderId = "openai" | "gemini" | "claude";
+export type ProviderId = "openai" | "gemini" | "claude" | "openrouter";
 
-export const PROVIDER_IDS: ProviderId[] = ["openai", "gemini", "claude"];
+export const PROVIDER_IDS: ProviderId[] = ["openai", "gemini", "claude", "openrouter"];
 
 interface NarrateOptions {
   provider: ProviderId;
@@ -30,6 +30,21 @@ export async function narrate(opts: NarrateOptions): Promise<string> {
     headers.Authorization = `Bearer ${apiKey}`;
     body = {
       model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.4,
+    };
+  } else if (provider === "openrouter") {
+    // `openrouter/free` auto-routes to whichever free models are currently
+    // available, so the app survives the roster rotating month to month.
+    url = "https://openrouter.ai/api/v1/chat/completions";
+    headers.Authorization = `Bearer ${apiKey}`;
+    headers["HTTP-Referer"] = "https://financelens.local";
+    headers["X-Title"] = "FinanceLens";
+    body = {
+      model: "openrouter/free",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -80,7 +95,7 @@ export async function narrate(opts: NarrateOptions): Promise<string> {
 
 function extractText(provider: ProviderId, data: unknown): string | null {
   const d = data as Record<string, unknown>;
-  if (provider === "openai") {
+  if (provider === "openai" || provider === "openrouter") {
     const choices = d?.choices as Array<{ message?: { content?: string } }> | undefined;
     return choices?.[0]?.message?.content ?? null;
   }
