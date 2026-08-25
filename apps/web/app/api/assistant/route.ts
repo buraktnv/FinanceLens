@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { narrate, PROVIDER_IDS, type ProviderId } from "@/lib/assistant/providers";
+import { fetchMarketContext } from "@/lib/assistant/market-context";
 
 export const runtime = "nodejs";
 
@@ -43,12 +44,25 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
+  // Güncel piyasa verisi (Yahoo): sunucu tarafında toplanır, istemci prompt'una
+  // [PİYASA] bölümü olarak eklenir. Başarısız olursa sessizce atlanır.
+  let userPrompt = body.userPrompt;
+  try {
+    const market = await fetchMarketContext();
+    if (market.lines.length > 0) {
+      userPrompt =
+        `${userPrompt}\n\nGuncel piyasa verileri (Yahoo Finance, ${market.fetchedAt}):\n${market.lines.join("\n")}`;
+    }
+  } catch {
+    // piyasa bağlamı opsiyoneldir
+  }
+
   try {
     const reply = await narrate({
       provider,
       apiKey,
       systemPrompt: body.systemPrompt,
-      userPrompt: body.userPrompt,
+      userPrompt,
       model:
         typeof body.model === "string" && body.model.trim()
           ? body.model.trim().slice(0, 120)

@@ -19,9 +19,10 @@ import {
   parseLlmNarration,
   type ReplyBlock,
 } from "@/lib/assistant/reply";
-import { buildSystemPrompt } from "@/lib/assistant/prompts";
+import { MASTER_SYSTEM_PROMPT } from "@/lib/assistant/prompts";
 import {
   eventsToContext,
+  retrieveHistory,
   retrieveKnowledge,
 } from "@/lib/assistant/history/knowledge";
 import { trEvents } from "@/lib/assistant/history/tr";
@@ -85,14 +86,17 @@ export function AssistantSheet() {
         const intent = detectIntent(question);
         const blocks = buildReply(intent, snapshot, settings, ALL_EVENTS);
 
-        // RAG: retrieve economic knowledge + matched history as grounded context.
+        // Derin RAG: soruyu eş anlamlı kökleriyle genişletip hem bilgi
+        // tabanını hem tüm tarihsel olayları tarar.
         const historyMatches = blocks.find((b) => b.type === "history");
         const ragChunks = retrieveKnowledge(question);
+        const ragEvents =
+          historyMatches && historyMatches.type === "history"
+            ? historyMatches.events
+            : retrieveHistory(question, ALL_EVENTS);
         const ragContext = [
           ...ragChunks.map((c) => `${c.title}: ${c.text}`),
-          ...(historyMatches && historyMatches.type === "history"
-            ? [eventsToContext(historyMatches.events)]
-            : []),
+          ...(ragEvents.length > 0 ? [eventsToContext(ragEvents)] : []),
         ];
 
         if (settings.apiKey) {
@@ -106,7 +110,7 @@ export function AssistantSheet() {
               body: JSON.stringify({
                 provider: settings.provider,
                 model: settings.model,
-                systemPrompt: buildSystemPrompt(intent),
+                systemPrompt: MASTER_SYSTEM_PROMPT,
                 userPrompt: buildNarrationUserPrompt(question, blocks, ragContext),
               }),
             });

@@ -126,6 +126,35 @@ export function normalizeForSearch(text: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/**
+ * Sorgu genişletme: kullanıcı hangi kelimeyi kullanırsa kullansın ilgili
+ * tarihsel olaylara ulaşsın diye eş anlamlı/kavram kökleri.
+ */
+const QUERY_EXPANSIONS: Record<string, string[]> = {
+  enflasyon: ["stagflation", "alim gucu", "fiyat"],
+  doviz: ["kur", "lira", "usd", "dolar", "currency"],
+  kur: ["doviz", "lira", "crisis"],
+  altin: ["gold", "guvenli liman", "ons"],
+  gumus: ["silver", "metal"],
+  borsa: ["hisse", "equity", "endeks", "stok"],
+  hisse: ["borsa", "equity", "endeks"],
+  birikim: ["tasarruf", "saving", "birikim orani"],
+  emekli: ["fire", "ozgurluk", "emeklilik"],
+  ozgur: ["fire", "bagimsizlik", "emeklilik"],
+  kriz: ["crisis", "cokus", "rezesyon", "2001", "2008", "1994", "2018"],
+  faiz: ["getiri", "bileşik", "compound"],
+  ev: ["gayrimenkul", "emlak", "kira"],
+  kredi: ["borc", "kaldirac"],
+};
+
+function expandTokens(tokens: string[]): string[] {
+  const out = new Set(tokens);
+  for (const t of tokens) {
+    for (const extra of QUERY_EXPANSIONS[t] ?? []) out.add(extra);
+  }
+  return [...out];
+}
+
 function scoreChunk(chunk: KnowledgeChunk, queryTokens: string[]): number {
   let score = 0;
   for (const token of queryTokens) {
@@ -140,18 +169,30 @@ function scoreChunk(chunk: KnowledgeChunk, queryTokens: string[]): number {
   return score;
 }
 
+function scoreEvent(event: HistoryEvent, queryTokens: string[]): number {
+  let score = 0;
+  const haystack =
+    `${normalizeForSearch(event.title)} ${normalizeForSearch(event.lesson)} ${normalizeForSearch(event.region)} ${event.type} ${event.year}`;
+  for (const token of queryTokens) {
+    if (token.length < 3) continue;
+    if (haystack.includes(token)) score += 2;
+    if (event.type === token) score += 2;
+  }
+  return score;
+}
+
 /**
- * Basit anahtar-kelime RAG: soruyu bilgi tabanındaki parçalarla eşleştirip
- * en alakalı K parçayı döner. Skor sıfır olanlar elenir; hepsi sıfırsa
- * genel geçer ilk üç kavram döner (bağlam boş kalmasın).
+ * Derin RAG: soruyu genişletip (eş anlamlı kökleriyle) hem bilgi tabanını hem
+ * tarihsel olayları tarar. Bilgi için skor sıfır olanlar elenir; hepsi sıfırsa
+ * genel geçer ilk üç kavram döner. Olaylar için eşik uygulanmaz, en iyi K
+ * olay döner ki model tarihe her soruda "kazısabilsin".
  */
-export function retrieveKnowledge(
-  question: string,
-  k = 3,
-): KnowledgeChunk[] {
-  const queryTokens = normalizeForSearch(question)
-    .split(/[^\p{L}\p{N}%]+/u)
-    .filter(Boolean);
+export function retrieveKnowledge(question: string, k = 5): KnowledgeChunk[] {
+  const queryTokens = expandTokens(
+    normalizeForSearch(question)
+      .split(/[^\p{L}\p{N}%]+/u)
+      .filter(Boolean),
+  );
 
   const scored = KNOWLEDGE.map((chunk) => ({
     chunk,
@@ -166,6 +207,24 @@ export function retrieveKnowledge(
   return KNOWLEDGE.filter((c) =>
     ["k-4pct", "k-saving-rate", "k-inflation"].includes(c.id),
   );
+}
+
+export function retrieveHistory(
+  question: string,
+  events: HistoryEvent[],
+  k = 3,
+): HistoryEvent[] {
+  const queryTokens = expandTokens(
+    normalizeForSearch(question)
+      .split(/[^\p{L}\p{N}%]+/u)
+      .filter(Boolean),
+  );
+
+  return events
+    .map((event) => ({ event, score: scoreEvent(event, queryTokens) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k)
+    .map((s) => s.event);
 }
 
 /** Kartlarda gösterilen olaylarla aynı kaynak: RAG'e tarih olayları da girer. */

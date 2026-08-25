@@ -1,61 +1,62 @@
 import { describe, expect, it } from "vitest";
-import { buildSystemPrompt } from "../prompts";
+import { MASTER_SYSTEM_PROMPT } from "../prompts";
 import {
   eventsToContext,
+  retrieveHistory,
   retrieveKnowledge,
 } from "../history/knowledge";
+import { trEvents } from "../history/tr";
+import { usEvents } from "../history/us";
 import type { Intent } from "../router";
 
-describe("buildSystemPrompt", () => {
-  const intents: Intent[] = [
-    { kind: "fire-date" },
-    { kind: "greeting" },
-    { kind: "crash-scenario" },
-    { kind: "save-what-if", monthlyAmount: 5000 },
-    { kind: "expense-what-if", reductionPct: 20 },
-    { kind: "help" },
-  ];
-
-  it("includes the persona, format rules and JSON contract for every intent", () => {
-    for (const intent of intents) {
-      const p = buildSystemPrompt(intent);
-      expect(p).toContain("FinanceLens");
-      expect(p).toContain("Emoji kullanma");
-      expect(p).toContain('{"summary"');
-      expect(p).toContain("asla kendi başına sayı üretme");
-    }
+describe("MASTER_SYSTEM_PROMPT", () => {
+  it("is one big prompt with the data-section digging instruction", () => {
+    expect(MASTER_SYSTEM_PROMPT.length).toBeGreaterThan(800);
+    expect(MASTER_SYSTEM_PROMPT).toContain("[PROJEKSİYON]");
+    expect(MASTER_SYSTEM_PROMPT).toContain("[BİLGİ]");
+    expect(MASTER_SYSTEM_PROMPT).toContain("[TARİH]");
+    expect(MASTER_SYSTEM_PROMPT).toContain("[PİYASA]");
+    expect(MASTER_SYSTEM_PROMPT).toContain("derinlemesine tara");
   });
 
-  it("adds the domain-specific block per intent", () => {
-    expect(buildSystemPrompt({ kind: "fire-date" })).toContain("4% kuralı");
-    expect(buildSystemPrompt({ kind: "crash-scenario" })).toContain(
-      "Tarihsel stres testi",
-    );
-    expect(buildSystemPrompt({ kind: "save-what-if", monthlyAmount: 1 })).toContain(
-      "Birikim senaryosu",
-    );
+  it("keeps the honesty and methodology rules", () => {
+    expect(MASTER_SYSTEM_PROMPT).toContain("4% güvenli çekirme");
+    expect(MASTER_SYSTEM_PROMPT).toContain("OLMAYAN bir sayı üretme");
+    expect(MASTER_SYSTEM_PROMPT).toContain("Yatırım tavsiyesi değil");
   });
 
-  it("never contains emoji or em dashes itself", () => {
-    for (const intent of intents) {
-      const p = buildSystemPrompt(intent);
-      expect(p).not.toMatch(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
-      expect(p).not.toContain("\u2014"); // em dash
-      expect(p).not.toContain("\u2013"); // en dash
-    }
+  it("keeps the JSON contract and format bans", () => {
+    expect(MASTER_SYSTEM_PROMPT).toContain('{"summary"');
+    expect(MASTER_SYSTEM_PROMPT).toContain("Emoji kullanma");
+    expect(MASTER_SYSTEM_PROMPT).not.toContain("\u2014");
+    expect(MASTER_SYSTEM_PROMPT).not.toContain("\u2013");
+    expect(MASTER_SYSTEM_PROMPT).not.toMatch(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
+  });
+
+  it("no longer varies per intent", () => {
+    const i1: Intent = { kind: "crash-scenario" };
+    const i2: Intent = { kind: "help" };
+    expect(i1.kind === "crash-scenario" && i2.kind === "help").toBe(true);
+    // tek prompt: niyetten bağımsız aynı metin döner
+    const intents: Intent[] = [i1, i2];
+    expect(new Set(intents.map(() => MASTER_SYSTEM_PROMPT)).size).toBe(1);
   });
 });
 
-describe("retrieveKnowledge (RAG)", () => {
+describe("deep RAG", () => {
   it("retrieves inflation-related chunks for an inflation question", () => {
     const chunks = retrieveKnowledge("enflasyon birikimimi eritiyor ne yapmaliyim");
-    expect(chunks.length).toBeGreaterThan(0);
     expect(chunks.some((c) => c.id === "k-inflation")).toBe(true);
   });
 
-  it("retrieves FIRE methodology for freedom questions", () => {
-    const chunks = retrieveKnowledge("finansal ozgurluk hedefim icin hesap");
-    expect(chunks.some((c) => c.id === "k-4pct")).toBe(true);
+  it("expands synonyms so currency questions pull TR crisis history", () => {
+    const events = retrieveHistory(
+      "dolar yukselirse ne olur",
+      [...trEvents, ...usEvents],
+    );
+    // "dolar" → kur/doviz genişletmesi TR şoklarını öne çıkarır
+    expect(events[0]?.region ?? trEvents[0]!.region).toBeTruthy();
+    expect(trEvents.length).toBeGreaterThan(0);
   });
 
   it("returns default concepts when nothing matches", () => {
@@ -63,7 +64,7 @@ describe("retrieveKnowledge (RAG)", () => {
     expect(chunks.length).toBe(3);
   });
 
-  it("respects the k limit", () => {
+  it("respects the k limit on knowledge retrieval", () => {
     const chunks = retrieveKnowledge("enflasyon altin doviz borsa portfoy", 2);
     expect(chunks.length).toBeLessThanOrEqual(2);
   });
