@@ -165,8 +165,19 @@ export class DashboardService {
       0,
     );
 
-    // Calculate cash total (TRY-native, no conversion)
-    const cashValue = cash.reduce((sum, c) => sum + Number(c.balance), 0);
+    // Calculate cash total, converted per-account currency to TRY.
+    const cashValue = cash.reduce(
+      (sum, c) =>
+        sum +
+        this.toTry(
+          Number(c.balance),
+          c.currency as string,
+          fxRates,
+          warnings,
+          (c as { name?: string }).name ?? c.id,
+        ),
+      0,
+    );
 
     // Calculate gold value (just purchase cost for now - current market price will be fetched on frontend)
     const goldValue = gold.reduce(
@@ -180,9 +191,9 @@ export class DashboardService {
       0,
     );
 
-    // Calculate loan balances
+    // Calculate loan balances ("??" not "||": a paid-off loan has 0 remaining)
     const totalDebt = loans.reduce(
-      (sum, l) => sum + Number(l.remainingBalance || l.principalAmount),
+      (sum, l) => sum + Number(l.remainingBalance ?? l.principalAmount ?? 0),
       0,
     );
 

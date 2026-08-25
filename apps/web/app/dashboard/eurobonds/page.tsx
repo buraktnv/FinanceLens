@@ -204,7 +204,8 @@ export default function EurobondsPage() {
                   const faceValue = Number(bond.faceValue);
                   const purchasePrice = Number(bond.purchasePrice);
                   const couponRate = Number(bond.couponRate) * 100;
-                  const annualIncome = faceValue * Number(bond.couponRate);
+                  const annualIncome =
+                    faceValue * Number(bond.quantity) * Number(bond.couponRate);
                   const maturityDate = new Date(bond.maturityDate);
                   const yearsToMaturity = ((maturityDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
 

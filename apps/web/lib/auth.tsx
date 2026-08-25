@@ -143,6 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInAsDemo = () => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(DEMO_USER_KEY, JSON.stringify(DEMO_USER));
+      // Edge middleware'i demo kullanicisini tanisin diye cerez birak.
+      document.cookie = 'financelens-demo=1; path=/; max-age=604800; samesite=lax';
     }
     setUser(DEMO_USER);
     setIsDemo(true);
@@ -155,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear demo session
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(DEMO_USER_KEY);
+      document.cookie = 'financelens-demo=; path=/; max-age=0';
     }
     if (isDemo) {
       setUser(null);

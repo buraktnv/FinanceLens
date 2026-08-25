@@ -21,7 +21,20 @@ function normalize(text: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/** Extracts a monthly amount from patterns like "15k", "5 bin", "25000". */
+/** "1.234" gibi TR binlik gruplarını sadeleştirir; tekil kısa grup dokunulmaz. */
+function stripThousandDots(s: string): string {
+  const parts = s.split(".");
+  if (
+    parts.length >= 2 &&
+    (parts[0]?.length ?? 0) <= 3 &&
+    parts.slice(1).every((p) => p.length === 3)
+  ) {
+    return s.replace(/\./g, "");
+  }
+  return s;
+}
+
+/** Extracts a monthly amount from patterns like "15k", "5 bin", "25.000 lira". */
 function parseAmount(text: string): number | null {
   const kMatch = text.match(/(\d+(?:[.,]\d+)?)\s*k\b/);
   if (kMatch) {
@@ -31,12 +44,12 @@ function parseAmount(text: string): number | null {
   if (binMatch) {
     return parseInt(binMatch[1] ?? "0", 10) * 1000;
   }
-  const plain = text.match(/(\d{3,7})\s*(?:tl|lira|liras?)/);
+  const plain = text.match(/([\d.]{3,11})\s*(?:tl|lira|liras?)/);
   if (plain) {
-    return parseInt(plain[1] ?? "0", 10);
+    return parseInt(stripThousandDots(plain[1] ?? "0"), 10);
   }
-  const bare = text.match(/\b(\d{4,7})\b/);
-  return bare ? parseInt(bare[1] ?? "0", 10) : null;
+  const bare = text.match(/\b(?:\d{1,3}(?:\.\d{3})+|\d{4,7})\b/);
+  return bare ? parseInt(stripThousandDots(bare[0] ?? "0"), 10) : null;
 }
 
 /** Extracts a percentage from patterns like "%20", "%20 dusse", "yariya". */

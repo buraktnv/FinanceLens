@@ -83,7 +83,16 @@ describe('DashboardService', () => {
         },
       ]);
       prismaService.cash.findMany.mockResolvedValue([
-        { accountName: 'TL hesabi', balance: decimal('10000') },
+        {
+          accountName: 'TL hesabi',
+          balance: decimal('10000'),
+          currency: 'TRY',
+        },
+        {
+          accountName: 'USD hesabi',
+          balance: decimal('1000'),
+          currency: 'USD',
+        },
       ]);
       prismaService.gold.findMany.mockResolvedValue([
         { quantity: decimal('1'), purchasePrice: decimal('3500') },
@@ -103,12 +112,12 @@ describe('DashboardService', () => {
       expect(result.breakdown.stocks.value).toBeCloseTo(8500, 6);
       // eurobonds: 1000x3x44 = 132000
       expect(result.breakdown.eurobonds.value).toBeCloseTo(132000, 6);
-      // cash/gold/silver are TRY-native: 10000 + 3500 + 500
-      expect(result.breakdown.cash.value).toBeCloseTo(10000, 6);
+      // cash: 10000 (TRY) + 1000x40 (USD->TRY) = 50000
+      expect(result.breakdown.cash.value).toBeCloseTo(50000, 6);
       expect(result.breakdown.gold.value).toBeCloseTo(3500, 6);
       expect(result.breakdown.silver.value).toBeCloseTo(500, 6);
-      expect(result.totalAssets).toBeCloseTo(154500, 6);
-      expect(result.netWorth).toBeCloseTo(154500, 6);
+      expect(result.totalAssets).toBeCloseTo(194500, 6);
+      expect(result.netWorth).toBeCloseTo(194500, 6);
 
       expect(yahooFinanceService.getFxRate).toHaveBeenCalledWith('USDTRY');
       expect(yahooFinanceService.getFxRate).toHaveBeenCalledWith('EURTRY');
@@ -150,13 +159,28 @@ describe('DashboardService', () => {
 
       const result = await service.getOverview(userId);
 
-      // stocks: 200 + 500 = 700, eurobonds: 3000, cash+gold+silver: 14000
-      expect(result.totalAssets).toBeCloseTo(17700, 6);
-      expect(result.netWorth).toBeCloseTo(17700, 6);
+      // stocks: 200 + 500 = 700, eurobonds: 3000, cash: 11000, gold+silver: 4000
+      expect(result.totalAssets).toBeCloseTo(18700, 6);
+      expect(result.netWorth).toBeCloseTo(18700, 6);
       expect(result.fxRates).toEqual(
         expect.objectContaining({ USDTRY: 1, EURTRY: 1 }),
       );
       expect(result.stale).toBe(true);
+    });
+
+    it('counts a paid-off loan (remainingBalance=0) as zero debt, not principal', async () => {
+      mixedPortfolio();
+      prismaService.loan.findMany.mockResolvedValue([
+        { remainingBalance: decimal('0'), principalAmount: decimal('250000') },
+        {
+          remainingBalance: decimal('5000'),
+          principalAmount: decimal('200000'),
+        },
+      ]);
+
+      const result = await service.getOverview(userId);
+
+      expect(result.totalDebt).toBeCloseTo(5000, 6);
     });
 
     it('should convert GBP stock rows via the mocked GBPTRY rate', async () => {
@@ -226,7 +250,8 @@ describe('DashboardService', () => {
 
       const result = await service.getOverview(userId);
 
-      // stocks: 200x1 + 500 = 700, eurobonds: 3000x44 = 132000, rest: 14000
+      // stocks: 200x1 + 500 = 700, eurobonds: 3000x44 = 132000,
+      // cash: 11000 (rate 1), gold+silver: 4000
       expect(result.breakdown.stocks.value).toBeCloseTo(700, 6);
       expect(result.breakdown.eurobonds.value).toBeCloseTo(132000, 6);
       expect(result.fxRates).toEqual(

@@ -255,7 +255,7 @@ function MobileNav({
       key={link.href}
       href={link.href}
       aria-label={link.title}
-      className={`flex flex-col items-center gap-0.5 shrink-0 min-w-[3.25rem] rounded-full px-2 py-1.5 text-[11px] transition-colors ${
+      className={`flex flex-col items-center gap-0.5 shrink-0 min-w-0 flex-1 rounded-full px-1 py-1.5 text-[10px] leading-tight transition-colors ${
         isActive(link.href)
           ? "bg-primary/15 text-primary-strong ring-1 ring-primary/40 shadow-[0_0_14px_-4px_var(--primary)]"
           : "text-muted-foreground hover:text-primary-strong hover:bg-muted"
@@ -272,7 +272,7 @@ function MobileNav({
       className="lg:hidden fixed bottom-2 left-2 right-2 z-30 rounded-full border bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/75 shadow-lg shadow-black/5 px-2 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]"
     >
       <div className="flex items-end justify-between">
-        <div className="flex flex-1 justify-around gap-0.5">{leftLinks.map(renderItem)}</div>
+        <div className="flex flex-1 justify-around gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{leftLinks.map(renderItem)}</div>
 
         <button
           type="button"
@@ -286,7 +286,7 @@ function MobileNav({
           </span>
         </button>
 
-        <div className="flex flex-1 justify-around gap-0.5">{rightLinks.map(renderItem)}</div>
+        <div className="flex flex-1 justify-around gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{rightLinks.map(renderItem)}</div>
       </div>
     </nav>
   );

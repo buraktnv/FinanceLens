@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -139,6 +139,12 @@ export function AssistantSettingsDialog({
 }) {
   const { settings, updateSettings } = useAssistant();
   const [draft, setDraft] = useState(settings);
+
+  // Dialog her açıldığında draft'ı hidrate edilmiş ayarlarla senkronize et;
+  // aksi halde eski varsayılanlar kaydedilip anahtar siliniyordu.
+  useEffect(() => {
+    if (open) setDraft(settings);
+  }, [open, settings]);
 
   const save = () => {
     updateSettings(draft);
