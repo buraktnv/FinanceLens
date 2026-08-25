@@ -238,8 +238,8 @@ export function AssistantSettingsDialog({
               autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
-              Anahtar sunucuda saklanmaz; her istekte başlıkla iletilir ve
-              yanıt sonunda atılır.
+              Bu cihazda AES-GCM ile şifrelenir; sunucuya hiç gönderilmez.
+              Sağlayıcı tarafında harcama limiti koymanız önerilir.
             </p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { ProviderId } from "@/lib/assistant/providers";
 import { PROVIDER_DEFAULT_MODELS } from "@/lib/assistant/providers";
+import { decryptSecret, encryptSecret } from "@/lib/assistant/secure-store";
 
 export interface AssistantSettings {
   apiKey: string;
@@ -25,7 +26,10 @@ const DEFAULT_SETTINGS: AssistantSettings = {
   annualInflationPct: 25,
 };
 
-const STORAGE_KEY = "financelens-assistant-settings";
+/** Anahtar dışındaki ayarlar düz JSON olarak tutulur. */
+const SETTINGS_KEY = "financelens-assistant-settings";
+/** API anahtarı ayrı, şifreli olarak tutulur. */
+const SECRET_KEY = "financelens-assistant-key";
 
 interface AssistantContextValue {
   open: boolean;
@@ -36,18 +40,20 @@ interface AssistantContextValue {
 
 const AssistantContext = createContext<AssistantContextValue | null>(null);
 
-function loadSettings(): AssistantSettings {
+function loadPlainSettings(): AssistantSettings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw) as Partial<AssistantSettings>;
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+
     const provider =
-      parsed.provider && ["openai", "gemini", "claude", "openrouter"].includes(parsed.provider)
+      typeof parsed.provider === "string" &&
+      ["openai", "gemini", "claude", "openrouter"].includes(parsed.provider)
         ? (parsed.provider as ProviderId)
         : DEFAULT_SETTINGS.provider;
+
     return {
-      apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",
+      apiKey: "",
       provider,
       model:
         typeof parsed.model === "string" && parsed.model.trim()
@@ -67,22 +73,97 @@ function loadSettings(): AssistantSettings {
   }
 }
 
+function persistPlainSettings(settings: AssistantSettings): void {
+  try {
+    const { apiKey: _apiKey, ...rest } = settings;
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
+  } catch {
+    // storage unavailable — in-memory only
+  }
+}
+
 export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<AssistantSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    setSettings(loadSettings());
+    let cancelled = false;
+
+    async function hydrate() {
+      // 1) Düz ayarları yükle.
+      const plain = loadPlainSettings();
+
+      // 2) Eski sürümde JSON içine yazılmış düz anahtarı göçür.
+      let legacyRaw: string | null = null;
+      try {
+        legacyRaw = window.localStorage.getItem(SETTINGS_KEY);
+      } catch {
+        legacyRaw = null;
+      }
+      let legacyKey = "";
+      if (legacyRaw) {
+        try {
+          const parsed = JSON.parse(legacyRaw) as { apiKey?: unknown };
+          if (typeof parsed.apiKey === "string" && parsed.apiKey.trim()) {
+            legacyKey = parsed.apiKey;
+          }
+        } catch {
+          // bozuk eski kayıt — yok say
+        }
+      }
+
+      // 3) Şifreli depodan anahtarı çöz; yoksa eski düz anahtarı kullan.
+      let storedSecret = "";
+      try {
+        storedSecret = await decryptSecret(
+          window.localStorage.getItem(SECRET_KEY),
+        );
+      } catch {
+        storedSecret = "";
+      }
+
+      const apiKey = storedSecret || legacyKey;
+
+      if (!cancelled) {
+        setSettings({ ...plain, apiKey });
+      }
+
+      // 4) Göç gerekiyorsa: anahtarı şifrele, eski düz alanı JSON'dan sil.
+      if (legacyKey && !storedSecret) {
+        try {
+          window.localStorage.setItem(
+            SECRET_KEY,
+            await encryptSecret(legacyKey),
+          );
+        } catch {
+          // şifreleme altyapısı yoksa düz depoya düşer (encryptSecret içinde)
+        }
+      }
+      persistPlainSettings({ ...plain, apiKey: "" });
+    }
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const updateSettings = (patch: Partial<AssistantSettings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...patch };
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // storage unavailable (private mode) — keep in-memory only
+
+      persistPlainSettings(next);
+
+      if (patch.apiKey !== undefined) {
+        void encryptSecret(patch.apiKey)
+          .then((enc) => {
+            window.localStorage.setItem(SECRET_KEY, enc);
+          })
+          .catch(() => {
+            // encryptSecret zaten plain fallback'e düşer; buraya düşmez
+          });
       }
+
       return next;
     });
   };
