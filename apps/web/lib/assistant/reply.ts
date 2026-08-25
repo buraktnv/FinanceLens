@@ -2,6 +2,10 @@ import { projectFire, type Assumptions, type AssistantSnapshot, type ProjectionR
 import { matchHistory } from "./history/matcher";
 import type { HistoryEvent } from "./history/matcher";
 import type { Intent } from "./router";
+import {
+  parseTransactionLocally,
+  type PendingTxn,
+} from "./transaction-parse";
 
 export interface TextBlock {
   type: "text";
@@ -20,7 +24,11 @@ export interface HistoryBlock {
   events: HistoryEvent[];
   intro: string;
 }
-export type ReplyBlock = TextBlock | ProjectionBlock | HistoryBlock;
+export interface ConfirmBlock {
+  type: "confirm";
+  txn: PendingTxn;
+}
+export type ReplyBlock = TextBlock | ProjectionBlock | HistoryBlock | ConfirmBlock;
 
 export function buildReply(
   intent: Intent,
@@ -124,6 +132,34 @@ export function buildReply(
       ];
     }
 
+    case "add-transaction": {
+      const txn = parseTransactionLocally(intent.raw);
+      if (!txn) {
+        return [
+          {
+            type: "text",
+            text: "İşlemi anlayamadım. Örnek biçim: \"5 adet Apple aldım $105.5\" ya da \"100 gram altın aldım 4450 ₺\".",
+          },
+        ];
+      }
+      const kindLabel: Record<PendingTxn["kind"], string> = {
+        stock: "Hisse senedi",
+        etf: "ETF",
+        gold: "Altın",
+        silver: "Gümüş",
+        eurobond: "Eurobond",
+        cash: "Nakit",
+        income: "Gelir",
+      };
+      return [
+        {
+          type: "text",
+          text: `Şu ${kindLabel[txn.kind].toLowerCase()} kaydını anladım; onaylarsan ekliyorum.`,
+        },
+        { type: "confirm", txn },
+      ];
+    }
+
     case "help":
     default:
       return [
@@ -146,7 +182,9 @@ export function buildNarrationUserPrompt(
       if (b.type === "text") return b.text;
       if (b.type === "projection")
         return `[PROJEKSİYON] Hedef: ${Math.round(b.result.fireNumberTRY)} ₺, tahmini tarih: ${b.result.fireDateISO ?? "50y içinde değil"}, yıl: ${b.result.yearsToFI ?? "-"}`;
-      return `[TARİH] ${b.events.map((e) => `${e.year} ${e.title}`).join("; ")}`;
+      if (b.type === "history")
+        return `[TARİH] ${b.events.map((e) => `${e.year} ${e.title}`).join("; ")}`;
+      return "";
     })
     .join("\n");
 

@@ -4,6 +4,7 @@ export type Intent =
   | { kind: "save-what-if"; monthlyAmount: number }
   | { kind: "expense-what-if"; reductionPct: number }
   | { kind: "crash-scenario"; eventId?: string }
+  | { kind: "add-transaction"; raw: string }
   | { kind: "help" };
 
 /** Turkish ASCII-tolerant normalization: fold diacritics via code-point escapes. */
@@ -50,8 +51,18 @@ const CRISIS_YEARS = ["2008", "2001", "1994", "2018", "2020", "1987"];
 export function detectIntent(rawText: string): Intent {
   const text = normalize(rawText);
 
-  if (/\b(merhaba|selam|hey|naber|ne yapıyorsun|nasilsin)\b/.test(text)) {
+  if (/\b(merhaba|selam|hey|naber|ne yapiyorsun|nasilsin)\b/.test(text)) {
     return { kind: "greeting" };
+  }
+
+  // Sohbetle islem ekleme: "5 adet apple aldim $105.5", "100 gram altin aldim"
+  if (
+    /\b(ald[iı]m|satt[iı]m|ekledim|ekle\b|bought|sold|purchased|added|invest)\b/.test(
+      text,
+    ) &&
+    /\d/.test(text)
+  ) {
+    return { kind: "add-transaction", raw: rawText };
   }
 
   if (/(kriz|cokerse|cokse|batarsa|rezil|dusus)/.test(text)) {

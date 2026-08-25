@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Settings2, SendHorizonal, Sparkles, X } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Settings2, SendHorizonal, Sparkles, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,6 +26,12 @@ import {
   retrieveHistory,
   retrieveKnowledge,
 } from "@/lib/assistant/history/knowledge";
+import {
+  parseTransactionFromLlm,
+  type PendingTxn,
+  type TxnKind,
+} from "@/lib/assistant/transaction-parse";
+import { stocksApi, etfsApi, goldApi, silverApi, eurobondsApi, cashApi, incomesApi } from "@/lib/api";
 import { trEvents } from "@/lib/assistant/history/tr";
 import { usEvents } from "@/lib/assistant/history/us";
 import { globalEvents } from "@/lib/assistant/history/global";
@@ -38,10 +45,106 @@ const ALL_EVENTS: HistoryEvent[] = [...trEvents, ...usEvents, ...globalEvents];
 
 const QUICK_REPLIES = [
   "Ne zaman özgür olurum?",
+  "5 adet Apple aldım $105.5",
   "Ayda 15k biriktirirsem?",
-  "Giderlerim %20 düşse?",
   "2008 gibi bir kriz olsaydı?",
 ];
+
+const TXN_EXTRACTION_PROMPT =
+  'Kullanicinin cumlesini finansal islem olarak ayristir. Yalnizca su JSON\'u don: ' +
+  '{"kind":"stock|gold|silver|eurobond|cash|income","name":"varlik adi","symbol":"borsa kodu (emin degilsen null)","quantity":sayi|null,"price":birim fiyat veya tutar|null,"currency":"USD|EUR|GBP|TRY"}. ' +
+  "Sayilari birebir aktar; sembol yaygin bilinen bir sirketse yaz, degilse null birak; tahmin etme.";
+
+async function commitTxn(txn: PendingTxn): Promise<string> {
+  const today = new Date().toISOString().slice(0, 10);
+  switch (txn.kind) {
+    case "stock": {
+      const symbol = txn.symbol ?? txn.name.toUpperCase().replace(/\s+/g, "");
+      await stocksApi.create({
+        symbol,
+        name: txn.name,
+        quantity: Number(txn.quantity ?? 0),
+        purchasePrice: Number(txn.price ?? 0),
+        currency: txn.currency,
+        purchaseDate: today,
+      });
+      return `Eklendi: ${symbol} x ${txn.quantity ?? 0} @ ${txn.price ?? "?"} ${txn.currency}`;
+    }
+    case "etf": {
+      await etfsApi.create({
+        symbol:
+          txn.symbol ?? txn.name.toUpperCase().replace(/s+/g, ""),
+        name: txn.name,
+        quantity: Number(txn.quantity ?? 0),
+        purchasePrice: Number(txn.price ?? 0),
+        currency: txn.currency,
+        purchaseDate: today,
+      });
+      return `Eklendi: ${txn.symbol ?? txn.name} x ${txn.quantity ?? 0}`;
+    }
+    case "gold":
+    case "silver": {
+      const api = txn.kind === "gold" ? goldApi : silverApi;
+      await api.create({
+        name: txn.name,
+        quantity: Number(txn.quantity ?? 0),
+        purchasePrice: Number(txn.price ?? 0),
+        purchaseDate: today,
+      });
+      return `Eklendi: ${txn.name} ${txn.quantity ?? 0} gram`;
+    }
+    case "eurobond": {
+      if (!txn.symbol && !txn.name) throw new Error("Tahvil adi gerekli");
+      await eurobondsApi.create({
+        name: txn.name,
+        faceValue: Number(txn.price ?? 1000),
+        purchasePrice: Number(txn.price ?? 1000),
+        quantity: Number(txn.quantity ?? 1),
+        couponRate: 0,
+        currency: txn.currency,
+        purchaseDate: today,
+        maturityDate: new Date(Date.now() + 5 * 365.25 * 86400000)
+          .toISOString()
+          .slice(0, 10),
+      });
+      return `Eklendi: ${txn.name} x ${txn.quantity ?? 1}`;
+    }
+    case "cash": {
+      await cashApi.create({
+        accountName: txn.name,
+        balance: Number(txn.price ?? txn.quantity ?? 0),
+        currency: txn.currency,
+      });
+      return `Hesap eklendi: ${txn.name}`;
+    }
+    case "income": {
+      await incomesApi.create({
+        type: "OTHER",
+        description: txn.name,
+        amount: Number(txn.price ?? txn.quantity ?? 0),
+        currency: txn.currency,
+        date: today,
+      });
+      return `Gelir eklendi: ${txn.name} ${txn.price ?? ""} ${txn.currency}`.trim();
+    }
+  }
+}
+
+function invalidateForKind(kind: TxnKind, queryClient: ReturnType<typeof useQueryClient>) {
+  const map: Record<TxnKind, string[][]> = {
+    stock: [["stocks"], ["stocks", "summary"]],
+    etf: [["etfs"], ["etfs", "summary"]],
+    gold: [["gold"]],
+    silver: [["silver"]],
+    eurobond: [["eurobonds"], ["eurobonds", "summary"]],
+    cash: [["cash"], ["cash", "summary"]],
+    income: [["incomes"], ["incomes", "summary"]],
+  };
+  for (const key of map[kind]) {
+    void queryClient.invalidateQueries({ queryKey: key });
+  }
+  void queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+}
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -51,6 +154,10 @@ interface ChatMessage {
 
 export function AssistantSheet() {
   const { open, setOpen, settings } = useAssistant();
+  const queryClient = useQueryClient();
+  const [symbolEdits, setSymbolEdits] = useState<Record<string, string>>({});
+  const [doneKeys, setDoneKeys] = useState<Set<string>>(new Set());
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -74,6 +181,27 @@ export function AssistantSheet() {
       }
     : null;
 
+  async function handleConfirm(txn: PendingTxn, key: string) {
+    setConfirmBusy(true);
+    try {
+      const finalTxn: PendingTxn = {
+        ...txn,
+        symbol:
+          txn.kind === "stock"
+            ? (symbolEdits[key] ?? txn.symbol ?? txn.name.toUpperCase().replace(/\s+/g, ""))
+            : txn.symbol,
+      };
+      const note = await commitTxn(finalTxn);
+      invalidateForKind(txn.kind, queryClient);
+      setDoneKeys((prev) => new Set(prev).add(key));
+      setMessages((m) => [...m, { role: "assistant", text: note }]);
+    } catch {
+      toast.error("Kayıt eklenemedi; alanları kontrol et");
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
   const send = async (raw: string) => {
     const question = raw.trim();
     if (!question || busy || !snapshot) return;
@@ -85,6 +213,47 @@ export function AssistantSheet() {
       try {
         const intent = detectIntent(question);
         const blocks = buildReply(intent, snapshot, settings, ALL_EVENTS);
+
+        // add-transaction + anahtar: cumleyi LLM ile daha iyi ayristir.
+        if (intent.kind === "add-transaction" && settings.apiKey) {
+          try {
+            const res = await fetch("/api/assistant", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-assistant-key": settings.apiKey,
+              },
+              body: JSON.stringify({
+                provider: settings.provider,
+                model: settings.model,
+                systemPrompt: TXN_EXTRACTION_PROMPT,
+                userPrompt: `Kullanıcının cümlesi: "${question}"`,
+              }),
+            });
+            if (res.ok) {
+              const json = (await res.json()) as { reply?: string };
+              const txn = json.reply ? parseTransactionFromLlm(json.reply) : null;
+              if (txn) {
+                setMessages((m) => [
+                  ...m,
+                  {
+                    role: "assistant",
+                    blocks: [
+                      {
+                        type: "text",
+                        text: "Şu kaydı anladım; onaylarsan ekliyorum.",
+                      },
+                      { type: "confirm", txn },
+                    ],
+                  },
+                ]);
+                return;
+              }
+            }
+          } catch {
+            // LLM yolunu düş — yerel parser zaten blokları kurdu.
+          }
+        }
 
         // Derin RAG: soruyu eş anlamlı kökleriyle genişletip hem bilgi
         // tabanını hem tüm tarihsel olayları tarar.
@@ -220,6 +389,86 @@ export function AssistantSheet() {
                           compare={"compare" in block ? block.compare : undefined}
                           compareLabel={"compareLabel" in block ? block.compareLabel : undefined}
                         />
+                      ) : block.type === "confirm" ? (
+                        <div
+                          key={j}
+                          className="max-w-[92%] rounded-2xl rounded-bl-sm border bg-card p-3 text-left"
+                        >
+                          <p className="mb-2 text-sm font-medium">İşlem özeti</p>
+                          <ul className="space-y-1 text-xs">
+                            {(
+                              [
+                                ["Tür", block.txn.kind],
+                                ["Varlık", block.txn.name],
+                                [
+                                  "Sembol",
+                                  block.txn.symbol ?? "(doldur)",
+                                ],
+                                ["Adet", block.txn.quantity ?? "?"],
+                                ["Fiyat", block.txn.price ?? "?"],
+                                ["Para birimi", block.txn.currency],
+                              ] as const
+                            ).map(([k, v]) => (
+                              <li key={k} className="flex justify-between gap-3">
+                                <span className="text-muted-foreground">{k}</span>
+                                {k === "Sembol" && !block.txn.symbol ? (
+                                  <Input
+                                    value={
+                                      symbolEdits[`${i}-${j}`] ??
+                                      ""
+                                    }
+                                    onChange={(e) =>
+                                      setSymbolEdits((prev) => ({
+                                        ...prev,
+                                        [`${i}-${j}`]: e.target.value.toUpperCase(),
+                                      }))
+                                    }
+                                    aria-label="Borsa kodu"
+                                    placeholder="AAPL"
+                                    className="h-6 w-28 text-right text-xs tabular-nums"
+                                  />
+                                ) : (
+                                  <span className="font-medium tabular-nums">
+                                    {typeof v === "number"
+                                      ? v.toLocaleString("tr-TR")
+                                      : v}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                          {doneKeys.has(`${i}-${j}`) ? (
+                            <p className="mt-2 text-xs font-medium text-success">
+                              Kayıt eklendi.
+                            </p>
+                          ) : (
+                            <div className="mt-2 flex gap-2">
+                              <Button
+                                size="sm"
+                                disabled={confirmBusy}
+                                onClick={() =>
+                                  void handleConfirm(block.txn, `${i}-${j}`)
+                                }
+                              >
+                                {confirmBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Onayla ve Ekle"
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={confirmBusy}
+                                onClick={() =>
+                                  setDoneKeys((prev) => new Set(prev).add(`${i}-${j}`))
+                                }
+                              >
+                                Vazgeç
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <HistoryFactsCard key={j} intro={block.intro} events={block.events} />
                       ),
