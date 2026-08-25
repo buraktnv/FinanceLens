@@ -19,6 +19,11 @@ import {
   parseLlmNarration,
   type ReplyBlock,
 } from "@/lib/assistant/reply";
+import { buildSystemPrompt } from "@/lib/assistant/prompts";
+import {
+  eventsToContext,
+  retrieveKnowledge,
+} from "@/lib/assistant/history/knowledge";
 import { trEvents } from "@/lib/assistant/history/tr";
 import { usEvents } from "@/lib/assistant/history/us";
 import { globalEvents } from "@/lib/assistant/history/global";
@@ -29,16 +34,6 @@ import { HistoryFactsCard } from "./message-cards";
 import { AssistantSettingsDialog } from "./settings-dialog";
 
 const ALL_EVENTS: HistoryEvent[] = [...trEvents, ...usEvents, ...globalEvents];
-
-const SYSTEM_PROMPT =
-  "Sen FinanceLens adlı kişisel finans uygulamasının asistanısın. " +
-  "Kullanıcıya profesyonel ve net bir Türkçe ile hitap edersin. " +
-  "SADECE verilen bağlamdaki sayıları kullan; asla kendi başına sayı üretme veya tahmin etme. " +
-  "Projeksiyonların varsayımlara dayalı olduğunu belirt. " +
-  "KURALLAR: Emoji kullanma. Em dash (—) veya en dash (–) karakterlerini kullanma; " +
-  "virgül veya nokta ile ayır. Madde işaretlerini kendin ekleme, points alanına koy. " +
-  "Yanıtını YALNIZCA şu JSON formatında ver, başka hiçbir metin ekleme: " +
-  '{"summary": "1-2 cümlelik ana cevap", "points": ["en fazla 3 kısa madde", "..."]}';
 
 const QUICK_REPLIES = [
   "Ne zaman özgür olurum?",
@@ -90,6 +85,16 @@ export function AssistantSheet() {
         const intent = detectIntent(question);
         const blocks = buildReply(intent, snapshot, settings, ALL_EVENTS);
 
+        // RAG: retrieve economic knowledge + matched history as grounded context.
+        const historyMatches = blocks.find((b) => b.type === "history");
+        const ragChunks = retrieveKnowledge(question);
+        const ragContext = [
+          ...ragChunks.map((c) => `${c.title}: ${c.text}`),
+          ...(historyMatches && historyMatches.type === "history"
+            ? [eventsToContext(historyMatches.events)]
+            : []),
+        ];
+
         if (settings.apiKey) {
           try {
             const res = await fetch("/api/assistant", {
@@ -101,8 +106,8 @@ export function AssistantSheet() {
               body: JSON.stringify({
                 provider: settings.provider,
                 model: settings.model,
-                systemPrompt: SYSTEM_PROMPT,
-                userPrompt: buildNarrationUserPrompt(question, blocks),
+                systemPrompt: buildSystemPrompt(intent),
+                userPrompt: buildNarrationUserPrompt(question, blocks, ragContext),
               }),
             });
             if (res.ok) {

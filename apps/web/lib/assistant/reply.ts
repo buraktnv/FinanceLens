@@ -135,10 +135,11 @@ export function buildReply(
   }
 }
 
-/** Builds the grounded narration prompt for optional LLM polish. */
+/** Builds the grounded narration prompt: engine facts + RAG knowledge. */
 export function buildNarrationUserPrompt(
   question: string,
   blocks: ReplyBlock[],
+  ragContext?: string[],
 ): string {
   const facts = blocks
     .map((b) => {
@@ -148,7 +149,15 @@ export function buildNarrationUserPrompt(
       return `[TARİH] ${b.events.map((e) => `${e.year} ${e.title}`).join("; ")}`;
     })
     .join("\n");
-  return `Kullanıcının sorusu: "${question}"\n\nMotor tarafından hesaplanan doğruluk bilgileri:\n${facts}\n\nBu bilgileri temel alarak yalnızca istenen JSON formatında yanıt ver.`;
+
+  const ragSection =
+    ragContext && ragContext.length > 0
+      ? `\n\nEkonomi bilgi tabanından alınan bağlam (yalnızca bunları açıklayıcı olarak kullan):\n${ragContext
+          .map((c) => `[BİLGİ] ${c}`)
+          .join("\n")}`
+      : "";
+
+  return `Kullanıcının sorusu: "${question}"\n\nMotor tarafından hesaplanan doğruluk bilgileri:\n${facts}${ragSection}\n\nBu bilgileri temel alarak yalnızca istenen JSON formatında yanıt ver.`;
 }
 
 /**
