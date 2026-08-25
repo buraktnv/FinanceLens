@@ -19,7 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "next-themes";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Sparkles } from "lucide-react";
+import { usePathname } from "next/navigation";
+import {
+  AssistantProvider,
+  useAssistant,
+} from "@/components/assistant/provider";
 
 const sidebarLinks = [
   {
@@ -91,6 +96,7 @@ export default function DashboardLayout({
   const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "User";
 
   return (
+    <AssistantProvider>
     <div className="min-h-screen bg-background">
       {/* Sidebar - Hidden on mobile, visible on desktop */}
       <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:z-40 lg:h-screen lg:w-64 lg:border-r lg:bg-background lg:block">
@@ -192,28 +198,73 @@ export default function DashboardLayout({
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation — horizontal scrollable strip exposing every route */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-background border-t">
-        <div className="flex gap-1 p-2 overflow-x-auto">
-          {[...sidebarLinks, { title: "Status", href: "/status", icon: FileText }].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="flex flex-col items-center gap-1 shrink-0 min-w-[4rem] rounded-lg px-2 py-2 text-muted-foreground hover:bg-muted hover:text-primary transition-colors"
-            >
-              <link.icon className="h-5 w-5" />
-              <span className="text-xs whitespace-nowrap">{link.title}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
+      {/* Mobile Bottom Navigation — floating neon pill with assistant CTA */}
+      <MobileNav links={[...sidebarLinks, { title: "Status", href: "/status", icon: FileText }]} />
 
       {/* Main content */}
-      <main className="lg:pl-64 pt-16 lg:pt-0 pb-20 lg:pb-0">
+      <main className="lg:pl-64 pt-16 lg:pt-0 pb-24 lg:pb-0">
         <div className="p-4 md:p-6 lg:p-8">
           {children}
         </div>
       </main>
     </div>
+    </AssistantProvider>
+  );
+}
+
+function MobileNav({
+  links,
+}: {
+  links: { title: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
+}) {
+  const pathname = usePathname();
+  const { setOpen } = useAssistant();
+
+  const isActive = (href: string) =>
+    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+
+  const half = Math.ceil(links.length / 2);
+  const leftLinks = links.slice(0, half);
+  const rightLinks = links.slice(half);
+
+  const renderItem = (link: (typeof links)[number]) => (
+    <Link
+      key={link.href}
+      href={link.href}
+      aria-label={link.title}
+      className={`flex flex-col items-center gap-0.5 shrink-0 min-w-[3.25rem] rounded-full px-2 py-1.5 text-[11px] transition-colors ${
+        isActive(link.href)
+          ? "bg-primary/15 text-primary-strong ring-1 ring-primary/40 shadow-[0_0_14px_-4px_var(--primary)]"
+          : "text-muted-foreground hover:text-primary-strong hover:bg-muted"
+      }`}
+    >
+      <link.icon className="h-[18px] w-[18px]" />
+      <span className="whitespace-nowrap">{link.title}</span>
+    </Link>
+  );
+
+  return (
+    <nav
+      aria-label="Mobil gezinme"
+      className="lg:hidden fixed bottom-2 left-2 right-2 z-30 rounded-full border bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/75 shadow-lg shadow-black/5 px-2 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]"
+    >
+      <div className="flex items-end justify-between">
+        <div className="flex flex-1 justify-around gap-0.5">{leftLinks.map(renderItem)}</div>
+
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Yapay zeka asistanını aç"
+          className="relative -translate-y-4 shrink-0 rounded-full bg-gradient-to-br from-primary to-accent p-[2px] shadow-[0_0_20px_-2px_var(--primary)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-card text-primary-strong">
+            <Sparkles className="h-5 w-5" />
+            <span className="text-[9px] leading-none">Asistan</span>
+          </span>
+        </button>
+
+        <div className="flex flex-1 justify-around gap-0.5">{rightLinks.map(renderItem)}</div>
+      </div>
+    </nav>
   );
 }
