@@ -2,11 +2,21 @@ export type ProviderId = "openai" | "gemini" | "claude" | "openrouter";
 
 export const PROVIDER_IDS: ProviderId[] = ["openai", "gemini", "claude", "openrouter"];
 
+/** Fallback model per provider when the user has not chosen one. */
+export const PROVIDER_DEFAULT_MODELS: Record<ProviderId, string> = {
+  openai: "gpt-4o-mini",
+  gemini: "gemini-1.5-flash",
+  claude: "claude-3-5-haiku-latest",
+  // Auto-router: survives OpenRouter's free-model roster rotating.
+  openrouter: "openrouter/free",
+};
+
 interface NarrateOptions {
   provider: ProviderId;
   apiKey: string;
   systemPrompt: string;
   userPrompt: string;
+  model?: string;
   signal?: AbortSignal;
 }
 
@@ -20,6 +30,7 @@ const TIMEOUT_MS = 30_000;
  */
 export async function narrate(opts: NarrateOptions): Promise<string> {
   const { provider, apiKey, systemPrompt, userPrompt, signal } = opts;
+  const model = (opts.model ?? "").trim() || PROVIDER_DEFAULT_MODELS[provider];
 
   let url = "";
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -29,7 +40,7 @@ export async function narrate(opts: NarrateOptions): Promise<string> {
     url = "https://api.openai.com/v1/chat/completions";
     headers.Authorization = `Bearer ${apiKey}`;
     body = {
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -44,7 +55,7 @@ export async function narrate(opts: NarrateOptions): Promise<string> {
     headers["HTTP-Referer"] = "https://financelens.local";
     headers["X-Title"] = "FinanceLens";
     body = {
-      model: "openrouter/free",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -52,7 +63,7 @@ export async function narrate(opts: NarrateOptions): Promise<string> {
       temperature: 0.4,
     };
   } else if (provider === "gemini") {
-    url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
     body = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
@@ -64,7 +75,7 @@ export async function narrate(opts: NarrateOptions): Promise<string> {
     headers["anthropic-version"] = "2023-06-01";
     headers["anthropic-dangerous-direct-browser-access"] = "true";
     body = {
-      model: "claude-3-5-haiku-latest",
+      model,
       max_tokens: 1024,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],

@@ -54,10 +54,20 @@ describe("POST /api/assistant", () => {
   it("relays to narrate and returns the reply", async () => {
     narrateMock.mockResolvedValue("Cevap metni");
     const res = await POST(
-      makeRequest(validBody, { "x-assistant-key": "k" }),
+      makeRequest({ ...validBody, model: "openrouter/free" }, { "x-assistant-key": "k" }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ reply: "Cevap metni" });
-    expect(narrateMock).toHaveBeenCalledTimes(1);
+    expect(narrateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "openai", model: "openrouter/free" }),
+    );
+  });
+
+  it("omits the model field when it is absent or blank", async () => {
+    narrateMock.mockResolvedValue("Cevap");
+    await POST(makeRequest({ ...validBody, model: "   " }, { "x-assistant-key": "k" }));
+    expect(narrateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ model: undefined }),
+    );
   });
 });

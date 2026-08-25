@@ -5,6 +5,7 @@ export const runtime = "nodejs";
 
 interface AssistantRequestBody {
   provider?: string;
+  model?: string;
   systemPrompt?: string;
   userPrompt?: string;
 }
@@ -48,6 +49,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       apiKey,
       systemPrompt: body.systemPrompt,
       userPrompt: body.userPrompt,
+      model:
+        typeof body.model === "string" && body.model.trim()
+          ? body.model.trim().slice(0, 120)
+          : undefined,
     });
     return NextResponse.json({ reply });
   } catch {

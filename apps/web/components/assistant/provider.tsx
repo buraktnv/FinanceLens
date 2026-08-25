@@ -7,10 +7,12 @@ import {
   useState,
 } from "react";
 import type { ProviderId } from "@/lib/assistant/providers";
+import { PROVIDER_DEFAULT_MODELS } from "@/lib/assistant/providers";
 
 export interface AssistantSettings {
   apiKey: string;
   provider: ProviderId;
+  model: string;
   annualReturnPct: number;
   annualInflationPct: number;
 }
@@ -18,6 +20,7 @@ export interface AssistantSettings {
 const DEFAULT_SETTINGS: AssistantSettings = {
   apiKey: "",
   provider: "openrouter",
+  model: PROVIDER_DEFAULT_MODELS.openrouter,
   annualReturnPct: 30,
   annualInflationPct: 25,
 };
@@ -46,6 +49,10 @@ function loadSettings(): AssistantSettings {
     return {
       apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",
       provider,
+      model:
+        typeof parsed.model === "string" && parsed.model.trim()
+          ? parsed.model
+          : PROVIDER_DEFAULT_MODELS[provider],
       annualReturnPct:
         typeof parsed.annualReturnPct === "number"
           ? parsed.annualReturnPct

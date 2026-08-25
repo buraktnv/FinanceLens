@@ -96,6 +96,7 @@ export function AssistantSheet() {
             },
             body: JSON.stringify({
               provider: settings.provider,
+              model: settings.model,
               systemPrompt: SYSTEM_PROMPT,
               userPrompt: buildNarrationUserPrompt(question, blocks),
             }),

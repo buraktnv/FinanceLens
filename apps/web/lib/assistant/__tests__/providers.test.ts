@@ -129,4 +129,42 @@ describe("narrate", () => {
       }),
     ).rejects.toThrow(/desteklenmeyen/i);
   });
+
+  it("uses the provider default model when none is given", async () => {
+    const f = mockFetch(200, { choices: [{ message: { content: "ok" } }] });
+    vi.stubGlobal("fetch", f);
+
+    await narrate({ provider: "openai", apiKey: KEY, systemPrompt: "s", userPrompt: "u" });
+
+    const [, init] = (f.mock.calls[0] ?? []) as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).model).toBe("gpt-4o-mini");
+  });
+
+  it("honors an explicit model override", async () => {
+    const f = mockFetch(200, { choices: [{ message: { content: "ok" } }] });
+    vi.stubGlobal("fetch", f);
+
+    await narrate({
+      provider: "openai",
+      apiKey: KEY,
+      systemPrompt: "s",
+      userPrompt: "u",
+      model: "  gpt-4.1-mini ",
+    });
+
+    const [, init] = (f.mock.calls[0] ?? []) as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).model).toBe("gpt-4.1-mini");
+  });
+
+  it("keeps openrouter/free as its default model id", async () => {
+    const f = mockFetch(200, {
+      choices: [{ message: { content: "ok" } }],
+    });
+    vi.stubGlobal("fetch", f);
+
+    await narrate({ provider: "openrouter", apiKey: KEY, systemPrompt: "s", userPrompt: "u" });
+
+    const [, init] = (f.mock.calls[0] ?? []) as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).model).toBe("openrouter/free");
+  });
 });

@@ -20,6 +20,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAssistant } from "./provider";
+import {
+  PROVIDER_DEFAULT_MODELS,
+  type ProviderId,
+} from "@/lib/assistant/providers";
+
+const MODEL_SUGGESTIONS: Record<ProviderId, string[]> = {
+  openai: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"],
+  gemini: ["gemini-1.5-flash", "gemini-1.5-pro"],
+  claude: ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest"],
+  openrouter: [
+    "openrouter/free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "qwen/qwen-2.5-72b-instruct:free",
+  ],
+};
 
 export function AssistantSettingsDialog({
   open,
@@ -91,7 +106,14 @@ export function AssistantSettingsDialog({
             <Label htmlFor="assistant-provider">LLM sağlayıcısı (isteğe bağlı)</Label>
             <Select
               value={draft.provider}
-              onValueChange={(v) => setDraft({ ...draft, provider: v as typeof draft.provider })}
+              onValueChange={(v) => {
+                const nextProvider = v as ProviderId;
+                setDraft({
+                  ...draft,
+                  provider: nextProvider,
+                  model: PROVIDER_DEFAULT_MODELS[nextProvider],
+                });
+              }}
             >
               <SelectTrigger id="assistant-provider">
                 <SelectValue />
@@ -103,6 +125,27 @@ export function AssistantSettingsDialog({
                 <SelectItem value="claude">Anthropic Claude</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="assistant-model">Model</Label>
+            <Input
+              id="assistant-model"
+              list="assistant-model-options"
+              value={draft.model}
+              onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+              placeholder={PROVIDER_DEFAULT_MODELS[draft.provider]}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <datalist id="assistant-model-options">
+              {(MODEL_SUGGESTIONS[draft.provider] ?? []).map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+            <p className="text-xs text-muted-foreground">
+              Serbest metin — sağlayıcının model kimliğini yazabilirsin.
+            </p>
           </div>
 
           <div className="space-y-1.5">
