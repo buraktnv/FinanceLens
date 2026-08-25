@@ -6,6 +6,8 @@ import type { Intent } from "./router";
 export interface TextBlock {
   type: "text";
   text: string;
+  /** Optional short bullet points rendered under the text. */
+  points?: string[];
 }
 export interface ProjectionBlock {
   type: "projection";
@@ -146,5 +148,61 @@ export function buildNarrationUserPrompt(
       return `[TARİH] ${b.events.map((e) => `${e.year} ${e.title}`).join("; ")}`;
     })
     .join("\n");
-  return `Kullanıcının sorusu: "${question}"\n\nMotor tarafından hesaplanan doğruluk bilgileri:\n${facts}\n\nBu bilgileri temel alarak samimi, kısa ve motive edici bir Türkçe yanıt yaz.`;
+  return `Kullanıcının sorusu: "${question}"\n\nMotor tarafından hesaplanan doğruluk bilgileri:\n${facts}\n\nBu bilgileri temel alarak yalnızca istenen JSON formatında yanıt ver.`;
+}
+
+/**
+ * Strips emojis/pictographs and replaces em/en dashes so the model can never
+ * decorate answers in ways the design system does not allow.
+ */
+export function sanitizeLlmText(text: string): string {
+  return text
+    .replace(
+      /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu,
+      "",
+    )
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
+interface LlmNarration {
+  summary: string;
+  points: string[];
+}
+
+/**
+ * Parses the model's JSON narration contract:
+ * {"summary": "...", "points": ["..."]}.
+ * Tolerates code fences and surrounding prose; falls back to treating the
+ * whole raw text as the summary.
+ */
+export function parseLlmNarration(raw: string): LlmNarration {
+  const sanitized = sanitizeLlmText(raw);
+
+  const start = sanitized.indexOf("{");
+  const end = sanitized.lastIndexOf("}");
+  if (start !== -1 && end > start) {
+    try {
+      const parsed = JSON.parse(sanitized.slice(start, end + 1)) as {
+        summary?: unknown;
+        points?: unknown;
+      };
+      if (typeof parsed.summary === "string" && parsed.summary.trim()) {
+        return {
+          summary: sanitizeLlmText(parsed.summary),
+          points: Array.isArray(parsed.points)
+            ? parsed.points
+                .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+                .slice(0, 4)
+                .map((p) => sanitizeLlmText(p))
+            : [],
+        };
+      }
+    } catch {
+      // fall through to plain-text handling
+    }
+  }
+
+  return { summary: sanitized, points: [] };
 }

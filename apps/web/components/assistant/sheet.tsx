@@ -16,6 +16,7 @@ import { detectIntent } from "@/lib/assistant/router";
 import {
   buildReply,
   buildNarrationUserPrompt,
+  parseLlmNarration,
   type ReplyBlock,
 } from "@/lib/assistant/reply";
 import { trEvents } from "@/lib/assistant/history/tr";
@@ -31,9 +32,13 @@ const ALL_EVENTS: HistoryEvent[] = [...trEvents, ...usEvents, ...globalEvents];
 
 const SYSTEM_PROMPT =
   "Sen FinanceLens adlı kişisel finans uygulamasının asistanısın. " +
-  "Kullanıcıya samimi ve motive edici bir Türkçe ile hitap edersin. " +
+  "Kullanıcıya profesyonel ve net bir Türkçe ile hitap edersin. " +
   "SADECE verilen bağlamdaki sayıları kullan; asla kendi başına sayı üretme veya tahmin etme. " +
-  "Projeksiyonların varsayımlara dayalı olduğunu belirtmeyi ihmal etme.";
+  "Projeksiyonların varsayımlara dayalı olduğunu belirt. " +
+  "KURALLAR: Emoji kullanma. Em dash (—) veya en dash (–) karakterlerini kullanma; " +
+  "virgül veya nokta ile ayır. Madde işaretlerini kendin ekleme, points alanına koy. " +
+  "Yanıtını YALNIZCA şu JSON formatında ver, başka hiçbir metin ekleme: " +
+  '{"summary": "1-2 cümlelik ana cevap", "points": ["en fazla 3 kısa madde", "..."]}';
 
 const QUICK_REPLIES = [
   "Ne zaman özgür olurum?",
@@ -81,43 +86,47 @@ export function AssistantSheet() {
     setInput("");
     setBusy(true);
 
-    try {
-      const intent = detectIntent(question);
-      let blocks = buildReply(intent, snapshot, settings, ALL_EVENTS);
-      let llmText: string | undefined;
+      try {
+        const intent = detectIntent(question);
+        const blocks = buildReply(intent, snapshot, settings, ALL_EVENTS);
 
-      if (settings.apiKey) {
-        try {
-          const res = await fetch("/api/assistant", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-assistant-key": settings.apiKey,
-            },
-            body: JSON.stringify({
-              provider: settings.provider,
-              model: settings.model,
-              systemPrompt: SYSTEM_PROMPT,
-              userPrompt: buildNarrationUserPrompt(question, blocks),
-            }),
-          });
-          if (res.ok) {
-            const json = (await res.json()) as { reply?: string };
-            llmText = json.reply;
+        if (settings.apiKey) {
+          try {
+            const res = await fetch("/api/assistant", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-assistant-key": settings.apiKey,
+              },
+              body: JSON.stringify({
+                provider: settings.provider,
+                model: settings.model,
+                systemPrompt: SYSTEM_PROMPT,
+                userPrompt: buildNarrationUserPrompt(question, blocks),
+              }),
+            });
+            if (res.ok) {
+              const json = (await res.json()) as { reply?: string };
+              if (json.reply) {
+                // Structured narration: summary + points first, graphics after.
+                const { summary, points } = parseLlmNarration(json.reply);
+                const graphicBlocks = blocks.filter((b) => b.type !== "text");
+                setMessages((m) => [
+                  ...m,
+                  { role: "assistant", blocks: [{ type: "text", text: summary, points }, ...graphicBlocks] },
+                ]);
+                return;
+              }
+            }
+          } catch {
+            // LLM unavailable — rule-based blocks below are still shown.
           }
-        } catch {
-          // LLM unavailable — rule-based blocks below are still shown.
         }
+
+        setMessages((m) => [...m, { role: "assistant", blocks }]);
+      } finally {
+        setBusy(false);
       }
-
-      blocks = llmText
-        ? [{ type: "text", text: llmText }, ...blocks.filter((b) => b.type !== "text")]
-        : blocks;
-
-      setMessages((m) => [...m, { role: "assistant", blocks }]);
-    } finally {
-      setBusy(false);
-    }
   };
 
   return (
@@ -171,12 +180,30 @@ export function AssistantSheet() {
                   <div className="space-y-2">
                     {msg.blocks?.map((block, j) =>
                       block.type === "text" ? (
-                        <p
+                        <div
                           key={j}
-                          className="inline-block max-w-[92%] whitespace-pre-line rounded-2xl rounded-bl-sm border bg-card px-3 py-1.5 text-left text-sm leading-relaxed"
+                          className="inline-block max-w-[92%] rounded-2xl rounded-bl-sm border bg-card px-3 py-2 text-left"
                         >
-                          {block.text}
-                        </p>
+                          <p className="whitespace-pre-line text-sm leading-relaxed">
+                            {block.text}
+                          </p>
+                          {block.points && block.points.length > 0 && (
+                            <ul className="mt-1.5 space-y-1 border-t pt-1.5">
+                              {block.points.map((point, k) => (
+                                <li
+                                  key={k}
+                                  className="flex gap-1.5 text-xs leading-relaxed text-muted-foreground"
+                                >
+                                  <span
+                                    aria-hidden="true"
+                                    className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary-strong"
+                                  />
+                                  <span>{point}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
                       ) : block.type === "projection" ? (
                         <ProjectionCard
                           key={j}
