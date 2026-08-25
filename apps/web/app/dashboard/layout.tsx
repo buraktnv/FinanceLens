@@ -201,6 +201,9 @@ export default function DashboardLayout({
 
       {/* Mobile Bottom Navigation — floating neon pill with assistant CTA */}
       <MobileNav links={[...sidebarLinks, { title: "Status", href: "/status", icon: FileText }]} />
+
+      {/* Desktop assistant entry point (mobile nav is hidden on lg+) */}
+      <DesktopAssistantButton />
       <AssistantSheet />
 
       {/* Main content */}
@@ -211,6 +214,24 @@ export default function DashboardLayout({
       </main>
     </div>
     </AssistantProvider>
+  );
+}
+
+function DesktopAssistantButton() {
+  const { setOpen, open } = useAssistant();
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(!open)}
+      aria-label="Yapay zeka asistanını aç"
+      className="hidden lg:flex fixed bottom-6 right-6 z-30 items-center gap-2 rounded-full bg-gradient-to-br from-primary to-accent p-[2px] shadow-[0_0_24px_-4px_var(--primary)] transition-transform hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span className="flex items-center gap-2 rounded-full bg-card px-4 py-2.5 text-sm font-medium text-primary-strong">
+        <Sparkles className={`h-4 w-4 ${open ? "animate-pulse" : ""}`} />
+        Finans Asistanı
+      </span>
+    </button>
   );
 }
 
