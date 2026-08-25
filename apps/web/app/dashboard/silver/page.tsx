@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, TrendingDown, Scale, Wallet, Banknote } from "lucide-react";
 import { silverApi, preciousMetalsApi, Silver } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddSilverForm } from "@/components/forms/add-silver-form";
 import { EditSilverForm } from "@/components/forms/edit-silver-form";
 import {
@@ -165,10 +166,29 @@ export default function SilverPage() {
         title="Silver Portfolio"
         description="All your silver assets"
         actions={
-          <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Silver
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="silver"
+              targetLabel="Gümüş"
+              fieldOrder={["name", "quantity", "purchasePrice", "currency"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await silverApi.create({
+                    name: String(row.name ?? ""),
+                    quantity: Number(row.quantity ?? 0),
+                    purchasePrice: Number(row.purchasePrice ?? 0),
+                    purchaseDate: new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["silver"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Silver
+            </Button>
+          </>
         }
       />
 

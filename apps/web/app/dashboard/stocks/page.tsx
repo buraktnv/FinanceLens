@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Loader2, Pencil, Trash2, BarChart3, Wallet, TrendingUp, Layers } from "lucide-react";
 import { stocksApi, Stock, yahooFinanceApi } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddStockForm } from "@/components/forms/add-stock-form";
 import { EditStockForm } from "@/components/forms/edit-stock-form";
 import { StockChart } from "@/components/stock-chart";
@@ -174,10 +175,34 @@ export default function StocksPage() {
         title="Stocks"
         description="Manage your stock portfolio"
         actions={
-          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4" />
-            Add New Stock
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="stock"
+              targetLabel="Hisse Senedi"
+              fieldOrder={["symbol", "name", "quantity", "purchasePrice", "currency", "purchaseDate"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await stocksApi.create({
+                    symbol: String(row.symbol ?? ""),
+                    name: String(row.name ?? ""),
+                    quantity: Number(row.quantity ?? 0),
+                    purchasePrice: Number(row.purchasePrice ?? 0),
+                    currency: (row.currency as Stock["currency"]) || "USD",
+                    purchaseDate: row.purchaseDate
+                      ? String(row.purchaseDate)
+                      : new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["stocks"] });
+                queryClient.invalidateQueries({ queryKey: ["stocks", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New Stock
+            </Button>
+          </>
         }
       />
 

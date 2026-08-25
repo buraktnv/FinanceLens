@@ -33,6 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, Loader2, Pencil, Trash2, Wallet, Banknote, TrendingUp, Percent } from "lucide-react";
 import { eurobondsApi, Eurobond } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddEurobondForm } from "@/components/forms/add-eurobond-form";
 import { EditEurobondForm } from "@/components/forms/edit-eurobond-form";
 import {
@@ -129,10 +130,38 @@ export default function EurobondsPage() {
         title="Eurobonds"
         description="Manage your eurobond portfolio"
         actions={
-          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4" />
-            Add New Eurobond
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="eurobond"
+              targetLabel="Eurobond"
+              fieldOrder={["name", "faceValue", "quantity", "couponRate", "currency", "maturityDate"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await eurobondsApi.create({
+                    name: String(row.name ?? ""),
+                    faceValue: Number(row.faceValue ?? 0),
+                    quantity: Number(row.quantity ?? 1),
+                    purchasePrice: Number(row.faceValue ?? 0),
+                    couponRate: Number(row.couponRate ?? 0),
+                    currency: (row.currency as Eurobond["currency"]) || "USD",
+                    purchaseDate: new Date().toISOString().slice(0, 10),
+                    maturityDate: row.maturityDate
+                      ? String(row.maturityDate)
+                      : new Date(Date.now() + 5 * 365.25 * 86400000)
+                          .toISOString()
+                          .slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["eurobonds"] });
+                queryClient.invalidateQueries({ queryKey: ["eurobonds", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New Eurobond
+            </Button>
+          </>
         }
       />
 

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, TrendingDown, Scale, Wallet, Banknote } from "lucide-react";
 import { goldApi, preciousMetalsApi, Gold } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddGoldForm } from "@/components/forms/add-gold-form";
 import { EditGoldForm } from "@/components/forms/edit-gold-form";
 import {
@@ -165,10 +166,29 @@ export default function GoldPage() {
         title="Gold Portfolio"
         description="All your gold assets"
         actions={
-          <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Gold
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="gold"
+              targetLabel="Altın"
+              fieldOrder={["name", "quantity", "purchasePrice", "currency"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await goldApi.create({
+                    name: String(row.name ?? ""),
+                    quantity: Number(row.quantity ?? 0),
+                    purchasePrice: Number(row.purchasePrice ?? 0),
+                    purchaseDate: new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["gold"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Gold
+            </Button>
+          </>
         }
       />
 

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Loader2, Pencil, Trash2, Wallet, Banknote } from "lucide-react";
 import { cashApi, Cash } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddCashForm } from "@/components/forms/add-cash-form";
 import { EditCashForm } from "@/components/forms/edit-cash-form";
 import {
@@ -136,10 +137,29 @@ export default function CashPage() {
         title="Cash Accounts"
         description="All your cash accounts"
         actions={
-          <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Account
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="cash"
+              targetLabel="Nakit Hesap"
+              fieldOrder={["name", "balance", "currency"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await cashApi.create({
+                    accountName: String(row.name ?? ""),
+                    balance: Number(row.balance ?? 0),
+                    currency: (row.currency as Cash["currency"]) || "TRY",
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["cash"] });
+                queryClient.invalidateQueries({ queryKey: ["cash", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Account
+            </Button>
+          </>
         }
       />
 

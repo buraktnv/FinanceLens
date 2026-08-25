@@ -33,6 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, Pencil, Trash2, Wallet, TrendingUp, Layers } from "lucide-react";
 import { etfsApi, ETF } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddETFForm } from "@/components/forms/add-etf-form";
 import { EditETFForm } from "@/components/forms/edit-etf-form";
 import {
@@ -127,10 +128,34 @@ export default function ETFsPage() {
         title="ETFs"
         description="Manage your ETF portfolio"
         actions={
-          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4" />
-            Add New ETF
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="etf"
+              targetLabel="ETF"
+              fieldOrder={["symbol", "name", "quantity", "purchasePrice", "currency", "purchaseDate"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await etfsApi.create({
+                    symbol: String(row.symbol ?? ""),
+                    name: String(row.name ?? ""),
+                    quantity: Number(row.quantity ?? 0),
+                    purchasePrice: Number(row.purchasePrice ?? 0),
+                    currency: (row.currency as ETF["currency"]) || "USD",
+                    purchaseDate: row.purchaseDate
+                      ? String(row.purchaseDate)
+                      : new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["etfs"] });
+                queryClient.invalidateQueries({ queryKey: ["etfs", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New ETF
+            </Button>
+          </>
         }
       />
 

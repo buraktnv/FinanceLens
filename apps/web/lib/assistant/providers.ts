@@ -216,3 +216,117 @@ function extractText(provider: ProviderId, data: unknown): string | null {
   const content = d?.content as Array<{ text?: string }> | undefined;
   return content?.map((c) => c.text ?? "").join("") || null;
 }
+
+export interface VisionExtractOptions {
+  provider: ProviderId;
+  apiKey: string;
+  model?: string;
+  systemPrompt: string;
+  userPrompt: string;
+  /** dataURL veya base64 (mime'siz) — mime'lı dataURL tercih edilir. */
+  imageDataUrl: string;
+  signal?: AbortSignal;
+}
+
+function splitDataUrl(dataUrl: string): { mime: string; b64: string } {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (match?.[1] && match[2]) return { mime: match[1], b64: match[2] };
+  return { mime: "image/jpeg", b64: dataUrl };
+}
+
+/**
+ * Görselden yapı çıkarımı: vision destekli modellere sağlayıcıya özel
+ * görsel payload'u ile gönderir. narrate() gibi anahtar saklamaz ve
+ * upstream hatalarını sanitize eder.
+ */
+export async function extractFromImage(opts: VisionExtractOptions): Promise<string> {
+  const { provider, apiKey, systemPrompt, userPrompt, signal } = opts;
+  const model = (opts.model ?? "").trim() || PROVIDER_DEFAULT_MODELS[provider];
+  const { mime, b64 } = splitDataUrl(opts.imageDataUrl);
+
+  let url = "";
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  let body: unknown;
+
+  if (provider === "openai" || provider === "openrouter") {
+    url =
+      provider === "openai"
+        ? "https://api.openai.com/v1/chat/completions"
+        : "https://openrouter.ai/api/v1/chat/completions";
+    headers.Authorization = `Bearer ${apiKey}`;
+    if (provider === "openrouter") {
+      headers["HTTP-Referer"] = "https://financelens.local";
+      headers["X-Title"] = "FinanceLens";
+    }
+    body = {
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userPrompt },
+            {
+              type: "image_url",
+              image_url: { url: `data:${mime};base64,${b64}` },
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 2000,
+    };
+  } else if (provider === "gemini") {
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    body = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: userPrompt },
+            { inline_data: { mime_type: mime, data: b64 } },
+          ],
+        },
+      ],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 2000 },
+    };
+  } else if (provider === "claude") {
+    url = "https://api.anthropic.com/v1/messages";
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+    body = {
+      model,
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
+            { type: "text", text: userPrompt },
+          ],
+        },
+      ],
+    };
+  } else {
+    throw new Error("Desteklenmeyen LLM saglayicisi");
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    signal: signal ?? AbortSignal.timeout(60_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`LLM saglayicisindan hata alindi (HTTP ${response.status})`);
+  }
+
+  const data = await response.json();
+  const text = extractText(provider, data);
+  if (!text) throw new Error("LLM saglayicisindan bos yanit geldi");
+  return text;
+}

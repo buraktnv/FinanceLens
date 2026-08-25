@@ -33,6 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Repeat, Loader2, Pencil, Trash2, TrendingUp, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { incomesApi, Income } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddIncomeForm } from "@/components/forms/add-income-form";
 import { EditIncomeForm } from "@/components/forms/edit-income-form";
 import {
@@ -157,10 +158,31 @@ export default function IncomesPage() {
         title="Incomes"
         description="Track your income sources"
         actions={
-          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4" />
-            Add New Income
-          </Button>
+          <>
+            <ImageImportButton
+              targetType="income"
+              targetLabel="Gelir"
+              fieldOrder={["source", "amount", "frequency", "currency", "date"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await incomesApi.create({
+                    type: String(row.frequency ?? row.source ?? "OTHER").toUpperCase(),
+                    description: row.source ? String(row.source) : undefined,
+                    amount: Number(row.amount ?? 0),
+                    currency: (row.currency as Income["currency"]) || "TRY",
+                    date: row.date ? String(row.date) : new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["incomes"] });
+                queryClient.invalidateQueries({ queryKey: ["incomes", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New Income
+            </Button>
+          </>
         }
       />
 
