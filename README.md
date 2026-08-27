@@ -26,7 +26,7 @@ kâr/zarar takibi ve TRY bazında normalize edilmiş net değerle.
 - **Cash accounts** — multi-currency balances normalized to TRY via live FX rates
 - **Income & Expenses** — recurring income support, categorized spending with payment-method filters
 - **Dashboard** — net worth, allocation donut, expense-category charts, savings rate, monthly cash flow; every non-TRY amount is FX-normalized and surfaced with staleness `warnings`
-- **AI Finans Asistanı** — floating assistant on every dashboard page: deterministic FIRE projection engine ("ayda 15k biriktirirsem ne zaman özgür olurum?"), what-if scenarios, historical stress tests against a curated TR/US/global crisis dataset, and optional LLM-powered narration using your own API key (never stored server-side)
+- **AI Finans Asistanı** — floating assistant on every dashboard page: deterministic FIRE projection engine ("ayda 15k biriktirirsem ne zaman özgür olurum?"), what-if scenarios, historical stress tests against a curated TR/US/global crisis dataset, optional LLM-powered narration using your own API key (never stored server-side), **image import** (portfolio statement photo → OCR/vision extraction with review flags) and **chat-based transaction entry** ("5 adet Apple aldım $105.5")
 - **Status page** — runway calculation and savings projections across all assets
 - **Demo mode** — run the entire UI on in-memory mock data (`NEXT_PUBLIC_USE_MOCK_DATA=true`), no backend required
 - **Auth** — Supabase JWT with a global `AuthGuard` (all API routes protected by default)
@@ -132,14 +132,23 @@ pnpm test          # Run all tests (Jest for api, Vitest for web)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch conventions and the [AGENTS.md](AGENTS.md) guide for repository layout, environment variables, and codebase conventions.
 
-<!-- SCREENSHOTS: replace the placeholders below with real captures.
-Expected images (docs/screenshots/):
-1. dashboard.png        — Dashboard overview (light)
-2. dashboard-dark.png   — Dashboard overview (dark)
-3. stocks.png           — Stocks page with price chart
-4. expenses.png         — Expense category breakdown
-5. status.png           — Financial status page
--->
+## Screenshots
+
+| Dashboard (light) | Dashboard (dark) |
+|-------------------|------------------|
+| <img src="docs/screenshots/dashboard.png" alt="Dashboard — light mode" width="440"> | <img src="docs/screenshots/dashboard-dark.png" alt="Dashboard — dark mode" width="440"> |
+
+| Stocks | Expenses |
+|--------|----------|
+| <img src="docs/screenshots/stocks.png" alt="Stocks page" width="440"> | <img src="docs/screenshots/expenses.png" alt="Expenses page" width="440"> |
+
+| Financial status | AI assistant |
+|------------------|--------------|
+| <img src="docs/screenshots/status.png" alt="Financial status page" width="440"> | <img src="docs/screenshots/assistant.png" alt="AI assistant" width="440"> |
+
+| Landing page |
+|--------------|
+| <img src="docs/screenshots/landing.png" alt="Landing page" width="890"> |
 
 ## Roadmap
 
