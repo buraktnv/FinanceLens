@@ -155,7 +155,7 @@ export function AddIncomeForm({ onSuccess, onCancel }: AddIncomeFormProps) {
               <SelectItem value="WEEKLY">Haftalik</SelectItem>
               <SelectItem value="MONTHLY">Aylik</SelectItem>
               <SelectItem value="QUARTERLY">3 Aylik</SelectItem>
-              <SelectItem value="SEMI_ANNUAL">6 Aylik</SelectItem>
+              <SelectItem value="SEMIANNUAL">6 Aylik</SelectItem>
               <SelectItem value="ANNUAL">Yillik</SelectItem>
             </SelectContent>
           </Select>

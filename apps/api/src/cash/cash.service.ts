@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCashDto, UpdateCashDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -35,17 +35,8 @@ export class CashService {
   }
 
   async update(userId: string, id: string, updateCashDto: UpdateCashDto) {
-    // First verify ownership
-    const cash = await this.prisma.cash.findFirst({
+    const updated = await this.prisma.cash.updateMany({
       where: { id, userId },
-    });
-
-    if (!cash) {
-      return null;
-    }
-
-    return this.prisma.cash.update({
-      where: { id },
       data: {
         ...(updateCashDto.accountName && {
           accountName: updateCashDto.accountName,
@@ -65,21 +56,21 @@ export class CashService {
         }),
       },
     });
+    if (updated.count === 0)
+      throw new NotFoundException('Cash account not found');
+
+    const cash = await this.prisma.cash.findUnique({ where: { id } });
+    if (!cash) throw new NotFoundException('Cash account not found');
+
+    return cash;
   }
 
-  async remove(userId: string, id: string) {
-    // First verify ownership
-    const cash = await this.prisma.cash.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.cash.deleteMany({
       where: { id, userId },
     });
-
-    if (!cash) {
-      return null;
-    }
-
-    return this.prisma.cash.delete({
-      where: { id },
-    });
+    if (result.count === 0)
+      throw new NotFoundException('Cash account not found');
   }
 
   // Get cash summary

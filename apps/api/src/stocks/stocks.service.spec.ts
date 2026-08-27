@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { StocksService } from './stocks.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockDto, UpdateStockDto } from './dto';
@@ -9,22 +10,30 @@ describe('StocksService', () => {
     stock: {
       findMany: jest.Mock;
       findFirst: jest.Mock;
+      findUnique: jest.Mock;
       create: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
       delete: jest.Mock;
+      deleteMany: jest.Mock;
     };
   };
 
   const userId = 'user-1';
   const stockId = 'stock-1';
 
+  // Minimal stand-in for Prisma.Decimal: the service only calls Number() on it.
+  const decimalLike = (value: string): { toString: () => string } => ({
+    toString: () => value,
+  });
+
   const mockStock = {
     id: stockId,
     userId,
     symbol: 'AAPL',
     name: 'Apple Inc.',
-    quantity: { toString: () => '10' } as any,
-    purchasePrice: { toString: () => '150' } as any,
+    quantity: decimalLike('10'),
+    purchasePrice: decimalLike('150'),
     currency: 'USD',
     purchaseDate: new Date('2024-01-01'),
     broker: 'XTB',
@@ -39,9 +48,12 @@ describe('StocksService', () => {
       stock: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn(),
       },
     };
 
@@ -83,7 +95,7 @@ describe('StocksService', () => {
             symbol: 'AAPL',
             name: 'Apple Inc.',
             currency: 'USD',
-          }),
+          }) as Record<string, unknown>,
           include: { dividends: true },
         }),
       );
@@ -146,63 +158,81 @@ describe('StocksService', () => {
       quantity: 15,
     };
 
-    it('should update the stock when it is owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(mockStock);
-      prismaService.stock.update.mockResolvedValue({
+    it('should update the stock atomically when it is owned by the user', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.stock.findUnique.mockResolvedValue({
         ...mockStock,
         name: 'Apple Inc. Updated',
       });
 
       const result = await service.update(userId, stockId, updateStockDto);
 
-      expect(prismaService.stock.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.stock.updateMany).toHaveBeenCalledWith({
         where: { id: stockId, userId },
+        data: expect.objectContaining({
+          name: 'Apple Inc. Updated',
+        }) as Record<string, unknown>,
       });
-      expect(prismaService.stock.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: stockId },
-          data: expect.objectContaining({
-            name: 'Apple Inc. Updated',
-          }),
-          include: { dividends: true },
-        }),
-      );
+      expect(prismaService.stock.findUnique).toHaveBeenCalledWith({
+        where: { id: stockId },
+        include: { dividends: true },
+      });
       expect(result).toEqual({ ...mockStock, name: 'Apple Inc. Updated' });
     });
 
-    it('should return null when the stock is not owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException when the stock is not owned by the user', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.update(userId, stockId, updateStockDto);
+      await expect(
+        service.update(userId, stockId, updateStockDto),
+      ).rejects.toThrow(NotFoundException);
+      expect(prismaService.stock.findUnique).not.toHaveBeenCalled();
+    });
 
-      expect(prismaService.stock.update).not.toHaveBeenCalled();
-      expect(result).toBeNull();
+    it('should throw NotFoundException when the stock is deleted after a successful update', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 1 });
+      prismaService.stock.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update(userId, stockId, updateStockDto),
+      ).rejects.toThrow(new NotFoundException('Stock not found'));
+    });
+
+    it('should throw NotFoundException when the stock does not exist', async () => {
+      prismaService.stock.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.update(userId, 'missing-id', updateStockDto),
+      ).rejects.toThrow(new NotFoundException('Stock not found'));
     });
   });
 
   describe('remove', () => {
-    it('should delete the stock when it is owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(mockStock);
-      prismaService.stock.delete.mockResolvedValue(mockStock);
+    it('should delete the stock atomically when it is owned by the user', async () => {
+      prismaService.stock.deleteMany.mockResolvedValue({ count: 1 });
 
       const result = await service.remove(userId, stockId);
 
-      expect(prismaService.stock.findFirst).toHaveBeenCalledWith({
+      expect(prismaService.stock.deleteMany).toHaveBeenCalledWith({
         where: { id: stockId, userId },
       });
-      expect(prismaService.stock.delete).toHaveBeenCalledWith({
-        where: { id: stockId },
-      });
-      expect(result).toEqual(mockStock);
+      expect(result).toBeUndefined();
     });
 
-    it('should return null when the stock is not owned by the user', async () => {
-      prismaService.stock.findFirst.mockResolvedValue(null);
+    it('should throw NotFoundException when the stock is not owned by the user', async () => {
+      prismaService.stock.deleteMany.mockResolvedValue({ count: 0 });
 
-      const result = await service.remove(userId, stockId);
+      await expect(service.remove(userId, stockId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
 
-      expect(prismaService.stock.delete).not.toHaveBeenCalled();
-      expect(result).toBeNull();
+    it('should throw NotFoundException when the stock does not exist', async () => {
+      prismaService.stock.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.remove(userId, 'missing-id')).rejects.toThrow(
+        new NotFoundException('Stock not found'),
+      );
     });
   });
 
@@ -210,11 +240,11 @@ describe('StocksService', () => {
     it('should aggregate portfolio cost and dividends', async () => {
       const stockWithDividends = {
         ...mockStock,
-        quantity: { toString: () => '10' } as any,
-        purchasePrice: { toString: () => '150' } as any,
+        quantity: decimalLike('10'),
+        purchasePrice: decimalLike('150'),
         dividends: [
-          { amount: { toString: () => '50' } as any },
-          { amount: { toString: () => '25' } as any },
+          { amount: decimalLike('50') },
+          { amount: decimalLike('25') },
         ],
       };
 
@@ -239,6 +269,28 @@ describe('StocksService', () => {
           totalCost: 1500,
         }),
       );
+    });
+
+    it('should return net dividends after withholding in the summary', async () => {
+      const stockWithTaxedDividends = {
+        ...mockStock,
+        quantity: decimalLike('10'),
+        purchasePrice: decimalLike('150'),
+        dividends: [
+          {
+            amount: decimalLike('100'),
+            taxWithheld: decimalLike('15'),
+          },
+          { amount: decimalLike('50'), taxWithheld: null },
+          { amount: decimalLike('25') },
+        ],
+      };
+
+      prismaService.stock.findMany.mockResolvedValue([stockWithTaxedDividends]);
+
+      const result = await service.getPortfolioSummary(userId);
+
+      expect(result.totalDividends).toBe(160);
     });
 
     it('should return zeroed totals when the user has no stocks', async () => {

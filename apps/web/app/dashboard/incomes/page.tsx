@@ -30,23 +30,33 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Repeat, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Repeat, Loader2, Pencil, Trash2, TrendingUp, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { incomesApi, Income } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddIncomeForm } from "@/components/forms/add-income-form";
 import { EditIncomeForm } from "@/components/forms/edit-income-form";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const incomeTypes: Record<string, { label: string; color: string }> = {
-  SALARY: { label: "Salary", color: "bg-blue-100 text-blue-800" },
-  RENTAL: { label: "Rental", color: "bg-green-100 text-green-800" },
-  DIVIDEND: { label: "Dividend", color: "bg-purple-100 text-purple-800" },
-  INTEREST: { label: "Interest", color: "bg-yellow-100 text-yellow-800" },
-  FREELANCE: { label: "Freelance", color: "bg-orange-100 text-orange-800" },
-  BONUS: { label: "Bonus", color: "bg-pink-100 text-pink-800" },
-  GIFT: { label: "Gift", color: "bg-teal-100 text-teal-800" },
-  REFUND: { label: "Refund", color: "bg-cyan-100 text-cyan-800" },
-  SALE: { label: "Sale", color: "bg-lime-100 text-lime-800" },
-  OTHER: { label: "Other", color: "bg-gray-100 text-gray-800" },
+  SALARY: { label: "Salary", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400" },
+  RENTAL: { label: "Rental", color: "bg-primary/15 text-primary-strong" },
+  DIVIDEND: { label: "Dividend", color: "bg-purple-500/15 text-purple-600 dark:text-purple-400" },
+  INTEREST: { label: "Interest", color: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  FREELANCE: { label: "Freelance", color: "bg-orange-500/15 text-orange-600 dark:text-orange-400" },
+  BONUS: { label: "Bonus", color: "bg-pink-500/15 text-pink-600 dark:text-pink-400" },
+  GIFT: { label: "Gift", color: "bg-teal-500/15 text-teal-600 dark:text-teal-400" },
+  REFUND: { label: "Refund", color: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400" },
+  SALE: { label: "Sale", color: "bg-lime-500/15 text-lime-600 dark:text-lime-400" },
+  OTHER: { label: "Other", color: "bg-muted text-muted-foreground" },
 };
 
 const frequencyLabels: Record<string, string> = {
@@ -64,14 +74,22 @@ export default function IncomesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
-  const { data: incomes = [], isLoading: incomesLoading, error: incomesError } = useQuery({
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // API expects 1-based month
+  const currentYear = now.getFullYear();
+  const {
+    data: incomes = [],
+    isLoading: incomesLoading,
+    error: incomesError,
+    refetch: refetchIncomes,
+  } = useQuery({
     queryKey: ["incomes"],
     queryFn: () => incomesApi.getAll(),
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["incomes", "summary"],
-    queryFn: () => incomesApi.getSummary(),
+    queryKey: ["incomes", "summary", currentYear, currentMonth],
+    queryFn: () => incomesApi.getSummary(currentMonth, currentYear),
   });
 
   const isLoading = incomesLoading || summaryLoading;
@@ -85,6 +103,10 @@ export default function IncomesPage() {
       toast.success("Income deleted successfully");
       setDeletingIncome(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingIncome(null);
+    },
   });
 
   const handleDelete = () => {
@@ -95,22 +117,32 @@ export default function IncomesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32 sm:h-9" />
+            <Skeleton className="h-4 w-52" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-40" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (incomesError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {incomesError instanceof Error ? incomesError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={
+          incomesError instanceof Error ? incomesError.message : undefined
+        }
+        onRetry={() => refetchIncomes()}
+      />
     );
   }
 
@@ -122,45 +154,58 @@ export default function IncomesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Incomes</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Track your income sources</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Income
-        </Button>
-      </div>
+      <PageHeader
+        title="Incomes"
+        description="Track your income sources"
+        actions={
+          <>
+            <ImageImportButton
+              targetType="income"
+              targetLabel="Gelir"
+              fieldOrder={["source", "amount", "frequency", "currency", "date"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await incomesApi.create({
+                    type: String(row.frequency ?? row.source ?? "OTHER").toUpperCase(),
+                    description: row.source ? String(row.source) : undefined,
+                    amount: Number(row.amount ?? 0),
+                    currency: (row.currency as Income["currency"]) || "TRY",
+                    date: row.date ? String(row.date) : new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["incomes"] });
+                queryClient.invalidateQueries({ queryKey: ["incomes", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New Income
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">This Month Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalThisMonth.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Recurring Income</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalRecurring.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Monthly recurring</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Income Sources</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{incomeCount}</div>
-            <p className="text-xs text-muted-foreground">Active sources</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="This Month Total"
+          value={formatCurrency(totalThisMonth)}
+          icon={TrendingUp}
+          tone="success"
+        />
+        <StatCard
+          title="Recurring Income"
+          value={formatCurrency(totalRecurring)}
+          hint="Monthly recurring"
+          icon={Repeat}
+        />
+        <StatCard
+          title="Income Sources"
+          value={incomeCount}
+          hint="Active sources"
+          icon={Layers}
+        />
       </div>
 
       {/* Income by Type */}
@@ -177,7 +222,7 @@ export default function IncomesPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm sm:text-base text-muted-foreground text-center py-4">No income data yet</p>
+            <EmptyState title="No income data yet" />
           )}
         </CardContent>
       </Card>
@@ -211,10 +256,10 @@ export default function IncomesPage() {
                         <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
                       </TableCell>
                       <TableCell className="text-sm">{income.description || "-"}</TableCell>
-                      <TableCell className="text-right font-medium text-sm text-green-600">
-                        +${amount.toLocaleString()}
+                      <TableCell className="text-right font-medium text-sm text-green-600 tabular-nums">
+                        +{formatCurrency(amount, income.currency)}
                       </TableCell>
-                      <TableCell className="text-sm">{new Date(income.date).toLocaleDateString("en-US")}</TableCell>
+                      <TableCell className="text-sm">{formatDate(income.date)}</TableCell>
                       <TableCell>
                         {income.isRecurring && income.frequency ? (
                           <Badge variant="outline" className="gap-1">
@@ -232,6 +277,7 @@ export default function IncomesPage() {
                             size="icon"
                             onClick={() => setEditingIncome(income)}
                             title="Edit"
+                            aria-label="Edit income"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -241,7 +287,8 @@ export default function IncomesPage() {
                             size="icon"
                             onClick={() => setDeletingIncome(income)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 h-8 w-8"
+                            aria-label="Delete income"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -253,13 +300,15 @@ export default function IncomesPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">No incomes added yet</p>
-              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4" />
-                Add Your First Income
-              </Button>
-            </div>
+            <EmptyState
+              title="No incomes added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Your First Income
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>
@@ -331,9 +380,9 @@ export default function IncomesPage() {
 function IncomeTypeCard({ type, amount }: { type: string; amount: number }) {
   const typeInfo = incomeTypes[type] ?? incomeTypes.OTHER!;
   return (
-    <div className="p-4 bg-gray-50 rounded-lg text-center">
+    <div className="p-4 bg-muted/30 rounded-lg text-center">
       <Badge className={typeInfo!.color}>{typeInfo!.label}</Badge>
-      <p className="text-lg sm:text-xl font-bold mt-2">${Number(amount).toLocaleString()}</p>
+      <p className="text-lg sm:text-xl font-bold mt-2 tabular-nums">{formatCurrency(amount)}</p>
     </div>
   );
 }

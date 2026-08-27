@@ -2,8 +2,9 @@
 
 # FinanceLens
 
-### Personal Finance Tracker — Full-Stack Monorepo
+### Kişisel Finans Takip Uygulaması — Full-Stack Monorepo
 
+[![CI](https://github.com/buraktnv/FinanceLens/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/buraktnv/FinanceLens/actions/workflows/ci.yml)
 [![Next.js](https://img.shields.io/badge/Next.js_16-black?logo=next.js)](https://nextjs.org/)
 [![NestJS](https://img.shields.io/badge/NestJS_11-red?logo=nestjs)](https://nestjs.com/)
 [![Prisma](https://img.shields.io/badge/Prisma_7-2D3748?logo=prisma)](https://www.prisma.io/)
@@ -11,7 +12,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript_5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React_19-61DAFB?logo=react)](https://react.dev/)
 
-Track investments, income, and expenses in one dashboard. Stocks, ETFs, eurobonds, gold, silver, and cash — with live price data, profit/loss tracking, and financial projections.
+Hisse senetleri, ETF'ler, eurobond, altın, gümüş ve nakit — tek panelden canlı fiyat verisiyle,
+kâr/zarar takibi ve TRY bazında normalize edilmiş net değerle.
 
 </div>
 
@@ -19,146 +21,139 @@ Track investments, income, and expenses in one dashboard. Stocks, ETFs, eurobond
 
 ## Features
 
-### Portfolio Management
-- **Stocks** — Full CRUD with live price polling (Yahoo Finance), interactive price charts, dividend tracking
-- **ETFs** — Holdings management with expense ratio and distribution tracking
-- **Eurobonds** — Bond portfolio with coupon rate, maturity date, and payment tracking
-- **Gold & Silver** — Precious metals with live price data and profit/loss calculation
-- **Cash Accounts** — Multi-currency bank account tracking
-
-### Financial Tracking
-- **Income** — Salary, freelance, dividends, rental, interest — with recurring income support
-- **Expenses** — Categorized spending with payment method tracking and visual breakdowns
-- **Dashboard** — Net worth overview, asset allocation, savings rate, monthly cash flow
-- **Financial Status** — Complete picture: runway calculation, savings projections
-
-### Platform
-- **Authentication** — Supabase Auth with JWT validation, protected routes, session management
-- **Dark Mode** — Full theme toggle with system preference detection
-- **Responsive** — Mobile-first design with bottom navigation bar
-- **Type-Safe** — End-to-end TypeScript with Prisma type generation
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 16, React 19, Tailwind CSS v4, ShadcnUI, TanStack Query v5 |
-| Backend | NestJS 11, Prisma 7, PostgreSQL, Swagger/OpenAPI |
-| Auth | Supabase (JWT), cookie-based sessions |
-| Charts | Recharts |
-| Build | Turborepo, pnpm |
+- **Stocks / ETFs / Eurobonds** — full CRUD, live Yahoo Finance prices, dividend & coupon tracking
+- **Gold & Silver** — live precious-metal prices (TRY/gram) with profit/loss calculation
+- **Cash accounts** — multi-currency balances normalized to TRY via live FX rates
+- **Income & Expenses** — recurring income support, categorized spending with payment-method filters
+- **Dashboard** — net worth, allocation donut, expense-category charts, savings rate, monthly cash flow; every non-TRY amount is FX-normalized and surfaced with staleness `warnings`
+- **AI Finans Asistanı** — floating assistant on every dashboard page: deterministic FIRE projection engine ("ayda 15k biriktirirsem ne zaman özgür olurum?"), what-if scenarios, historical stress tests against a curated TR/US/global crisis dataset, optional LLM-powered narration using your own API key (never stored server-side), **image import** (portfolio statement photo → OCR/vision extraction with review flags) and **chat-based transaction entry** ("5 adet Apple aldım $105.5")
+- **Status page** — runway calculation and savings projections across all assets
+- **Demo mode** — run the entire UI on in-memory mock data (`NEXT_PUBLIC_USE_MOCK_DATA=true`), no backend required
+- **Auth** — Supabase JWT with a global `AuthGuard` (all API routes protected by default)
+- **Dark mode** — semantic design tokens with a neon mint/gold/orange brand palette, system preference detection
+- **Turkish-first UI** — tr-TR locale, ₺ currency, DD.MM.YYYY dates via a shared formatter library
+- **Type-safe end to end** — Prisma types shared between web and API; all incoming API payloads validated by `class-validator` DTOs
 
 ## Architecture
 
-```
-FinanceLens/
-├── apps/
-│   ├── web/           # Next.js frontend (App Router, React 19)
-│   ├── api/           # NestJS backend (Swagger docs at /api/docs)
-│   └── docs/          # Documentation site
-├── packages/
-│   ├── eslint-config/    # Shared ESLint flat configs
-│   └── typescript-config/ # Shared tsconfig presets
-├── .github/workflows/  # CI pipeline
-└── turbo.json
+```mermaid
+flowchart LR
+    subgraph client["Browser"]
+        W["apps/web\nNext.js 16 :3000"]
+    end
+
+    subgraph backend["Backend"]
+        A["apps/api\nNestJS 11 :3001"]
+    end
+
+    D["Supabase\nPostgreSQL + Auth"]
+    Y["Yahoo Finance\nquotes, FX, metals"]
+
+    W -- "REST /api (Bearer JWT)" --> A
+    W -. "demo mode: in-memory mocks\n(NEXT_PUBLIC_USE_MOCK_DATA)" .-> W
+    A --> D
+    A -- "price/FX fetch, 15 min cache" --> Y
 ```
 
-### Frontend Highlights
-- App Router with server/client components
-- AuthProvider context with Supabase SSR
-- Typed API client with mock/real toggle (`NEXT_PUBLIC_USE_MOCK_DATA`)
-- React Query for data fetching with optimistic cache invalidation
-- Form validation with Zod schemas
-- Toast notifications (Sonner)
-- Loading, error, and empty states on every page
-
-### Backend Highlights
-- Global `AuthGuard` (all routes protected by default, `@Public()` for exemptions)
-- Multi-tenant: every query scoped by `userId` with ownership verification
-- `ValidationPipe` globally enabled with `class-validator` on all DTOs
-- Swagger/OpenAPI documentation at `/api/docs`
-- 14 Prisma models with proper relations, cascades, and indexing
-- Live price integration: Yahoo Finance + precious metals with caching
+| App | Port | Description |
+|-----|------|-------------|
+| `apps/web` | 3000 | Next.js frontend (App Router, React 19) |
+| `apps/api` | 3001 | NestJS backend — Swagger at `/api/docs` |
+| `apps/docs` | 3002 | Documentation site |
 
 ## Quick Start
 
-### Prerequisites
-- Node.js 18+
-- pnpm 9+
+Prerequisites: **Node.js ≥ 20.19**, **pnpm 9**.
 
-### Option 1: Mock Mode (No backend needed)
+### Option 1: Demo Mode (no backend needed)
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/buraktnv/FinanceLens.git
 cd FinanceLens
 pnpm install
+cp apps/web/.env.example apps/web/.env.local   # set NEXT_PUBLIC_USE_MOCK_DATA=true
 pnpm dev --filter=web
 ```
 
-The app runs with mock data at `http://localhost:3000`.
+Open http://localhost:3000 — the UI runs entirely on mock data.
 
 ### Option 2: Full Stack
 
 ```bash
-# 1. Set up environment
-cp apps/web/.env.example apps/web/.env.local    # Fill in Supabase keys
-cp apps/api/.env.example apps/api/.env          # Fill in DATABASE_URL + Supabase
+# 1. Environment
+cp apps/web/.env.example apps/web/.env.local    # Supabase keys, NEXT_PUBLIC_USE_MOCK_DATA=false
+cp apps/api/.env.example apps/api/.env          # DATABASE_URL + Supabase keys
 
-# 2. Install and generate
+# 2. Install and generate Prisma client
 pnpm install
 pnpm --filter api prisma:generate
 pnpm --filter api prisma db push
 
-# 3. Run both apps
+# 3. Run everything (web + api + docs)
 pnpm dev
 ```
 
-| App | URL |
-|-----|-----|
-| Web | http://localhost:3000 |
-| API | http://localhost:3001/api |
-| Swagger | http://localhost:3001/api/docs |
-
-### Switching Mock / Real Mode
-
-In `apps/web/.env.local`:
-```env
-# Mock data (default — no backend needed)
-NEXT_PUBLIC_USE_MOCK_DATA=true
-
-# Real API
-NEXT_PUBLIC_USE_MOCK_DATA=false
-```
+| URL | What |
+|-----|------|
+| http://localhost:3000 | Web app |
+| http://localhost:3001/api | REST API |
+| http://localhost:3001/api/docs | Swagger UI |
 
 ## API Endpoints
 
-All endpoints require Bearer token authentication (except health check).
+Global prefix `/api`. Every route requires a Bearer token (Supabase JWT) except the health check.
+Resource routes below follow the same shape: `POST ''`, `GET ''`, `GET 'summary'`, `GET/PATCH/DELETE ':id'`.
 
-| Resource | Endpoints |
-|----------|-----------|
-| Stocks | `GET/POST /api/stocks`, `GET/PATCH/DELETE /api/stocks/:id`, `GET /api/stocks/summary` |
-| ETFs | `GET/POST /api/etfs`, `GET/PATCH/DELETE /api/etfs/:id`, `GET /api/etfs/summary` |
-| Eurobonds | `GET/POST /api/eurobonds`, `GET/PATCH/DELETE /api/eurobonds/:id`, `GET /api/eurobonds/summary` |
-| Incomes | `GET/POST /api/incomes`, `GET/PATCH/DELETE /api/incomes/:id`, `GET /api/incomes/summary` |
-| Expenses | `GET/POST /api/expenses`, `GET/PATCH/DELETE /api/expenses/:id`, `GET /api/expenses/summary` |
-| Cash | `GET/POST /api/cash`, `GET/PATCH/DELETE /api/cash/:id`, `GET /api/cash/summary` |
-| Gold | `GET/POST /api/gold`, `GET/PATCH/DELETE /api/gold/:id`, `GET /api/gold/summary` |
-| Silver | `GET/POST /api/silver`, `GET/PATCH/DELETE /api/silver/:id`, `GET /api/silver/summary` |
-| Dashboard | `GET /api/dashboard/overview`, `GET /api/dashboard/transactions` |
-| Prices | `GET /api/precious-metals/gold/price`, `GET /api/yahoo-finance/quote/:symbol` |
+| Resource | Routes |
+|----------|--------|
+| Stocks | `/api/stocks`, `/api/stocks/summary` |
+| ETFs | `/api/etfs`, `/api/etfs/summary` |
+| Eurobonds | `/api/eurobonds`, `/api/eurobonds/summary` |
+| Incomes | `/api/incomes`, `/api/incomes/summary` (+ `type`, `startDate`, `endDate` filters) |
+| Expenses | `/api/expenses`, `/api/expenses/summary` (+ `category`, `paymentMethod`, date filters) |
+| Cash | `/api/cash`, `/api/cash/summary` |
+| Gold | `/api/gold`, `/api/gold/summary` |
+| Silver | `/api/silver`, `/api/silver/summary` |
+| Dashboard | `GET /api/dashboard/overview` (FX-normalized, includes `fxRates` + `warnings`), `GET /api/dashboard/transactions` |
+| Prices | `GET /api/precious-metals/gold/price`, `GET /api/precious-metals/silver/price`, `GET /api/yahoo-finance/search?q=`, `GET /api/yahoo-finance/quote/:symbol`, `GET /api/yahoo-finance/historical/:symbol` |
+| Health | `GET /api` (public) |
 
-Full interactive documentation available at `/api/docs` when the API is running.
+Interactive documentation at `/api/docs` while the API runs locally (Swagger is disabled in production).
 
 ## Development
 
 ```bash
-pnpm dev          # Run all apps
-pnpm build        # Build all apps
-pnpm lint         # Lint all packages
-pnpm check-types  # Type-check all packages
-pnpm test         # Run backend tests
+pnpm dev           # Run all apps
+pnpm build         # Build all apps
+pnpm lint          # Lint all packages
+pnpm check-types   # Type-check all packages
+pnpm test          # Run all tests (Jest for api, Vitest for web)
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch conventions and the [AGENTS.md](AGENTS.md) guide for repository layout, environment variables, and codebase conventions.
+
+## Screenshots
+
+| Dashboard (light) | Dashboard (dark) |
+|-------------------|------------------|
+| <img src="docs/screenshots/dashboard.png" alt="Dashboard — light mode" width="440"> | <img src="docs/screenshots/dashboard-dark.png" alt="Dashboard — dark mode" width="440"> |
+
+| Stocks | Expenses |
+|--------|----------|
+| <img src="docs/screenshots/stocks.png" alt="Stocks page" width="440"> | <img src="docs/screenshots/expenses.png" alt="Expenses page" width="440"> |
+
+| Financial status | AI assistant |
+|------------------|--------------|
+| <img src="docs/screenshots/status.png" alt="Financial status page" width="440"> | <img src="docs/screenshots/assistant.png" alt="AI assistant" width="440"> |
+
+| Landing page |
+|--------------|
+| <img src="docs/screenshots/landing.png" alt="Landing page" width="890"> |
+
+## Roadmap
+
+A visual product roadmap is planned at `docs/review/index.html` — coming soon.
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 FinanceLens

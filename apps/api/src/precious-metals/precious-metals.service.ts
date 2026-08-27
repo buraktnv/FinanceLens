@@ -9,18 +9,28 @@ export interface PreciousMetalPrice {
   usdToTry: number;
 }
 
+/** Upstream Yahoo Finance chart payload (dynamic third-party JSON). */
+interface YahooChartResponse {
+  chart?: {
+    result?: Array<{
+      meta: { symbol: string; regularMarketPrice: number; currency: string };
+    }>;
+  };
+}
+
 @Injectable()
 export class PreciousMetalsService {
   private readonly baseUrl = 'https://query1.finance.yahoo.com';
 
   // Constants
-  private readonly GRAMS_PER_OUNCE = 28.3495;
+  private readonly GRAMS_PER_TROY_OUNCE = 31.1035;
   private readonly GOLD_SYMBOL = 'GC=F'; // Gold futures
   private readonly SILVER_SYMBOL = 'SI=F'; // Silver futures
   private readonly USDTRY_SYMBOL = 'USDTRY=X'; // USD/TRY exchange rate
 
   // Cache (in-memory)
-  private cache: Map<string, { data: any; expiry: number }> = new Map();
+  private cache: Map<string, { data: PreciousMetalPrice; expiry: number }> =
+    new Map();
   private readonly CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
   /**
@@ -60,7 +70,7 @@ export class PreciousMetalsService {
 
       // Convert USD/oz to TRY/gram
       const tryPerOunce = usdPerOunce * usdToTry;
-      const tryPerGram = tryPerOunce / this.GRAMS_PER_OUNCE;
+      const tryPerGram = tryPerOunce / this.GRAMS_PER_TROY_OUNCE;
 
       const result: PreciousMetalPrice = {
         metal,
@@ -75,10 +85,10 @@ export class PreciousMetalsService {
       this.saveToCache(cacheKey, result);
 
       return result;
-    } catch (error) {
+    } catch {
       throw new HttpException(
-        `Failed to fetch ${metal} price: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        `Failed to fetch ${metal} price`,
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
   }
@@ -86,10 +96,16 @@ export class PreciousMetalsService {
   /**
    * Get quote from Yahoo Finance
    */
-  private async getQuote(symbol: string): Promise<any> {
+  private async getQuote(symbol: string): Promise<{
+    symbol: string;
+    regularMarketPrice: number;
+    currency: string;
+  }> {
     const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!response.ok) {
       throw new HttpException(
         'Yahoo Finance API error',
@@ -97,7 +113,9 @@ export class PreciousMetalsService {
       );
     }
 
-    const data = await response.json();
+    // Upstream Yahoo JSON is dynamic; the guards below narrow it at runtime.
+    const data = (await response.json()) as YahooChartResponse;
+
     if (!data.chart?.result?.[0]) {
       throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);
     }
@@ -111,7 +129,7 @@ export class PreciousMetalsService {
   }
 
   // Simple in-memory cache methods
-  private getFromCache(key: string): any | null {
+  private getFromCache(key: string): PreciousMetalPrice | null {
     const cached = this.cache.get(key);
     if (cached && cached.expiry > Date.now()) {
       return cached.data;
@@ -119,7 +137,7 @@ export class PreciousMetalsService {
     return null;
   }
 
-  private saveToCache(key: string, data: any): void {
+  private saveToCache(key: string, data: PreciousMetalPrice): void {
     this.cache.set(key, {
       data,
       expiry: Date.now() + this.CACHE_TTL,

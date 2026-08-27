@@ -61,7 +61,6 @@ export function EditStockForm({ stock, onSuccess, onCancel }: EditStockFormProps
             placeholder="THYAO"
             required
             disabled
-            className="bg-gray-100"
           />
           <p className="text-xs text-muted-foreground mt-1">Sembol degistirilemez</p>
         </div>

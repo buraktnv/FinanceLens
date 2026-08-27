@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FinanceLens — Proje İnceleme Raporu</title>
+<style>
+  :root {
+    --bg: #09090b;
+    --bg-soft: #111113;
+    --card: #18181b;
+    --card-hover: #1f1f23;
+    --border: #27272a;
+    --text: #e4e4e7;
+    --muted: #a1a1aa;
+    --faint: #71717a;
+    --accent: #10b981;
+    --accent-soft: rgba(16, 185, 129, 0.12);
+    --accent-border: rgba(16, 185, 129, 0.35);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245, 158, 11, 0.14);
+    --rose: #f43f5e;
+    --rose-soft: rgba(244, 63, 94, 0.14);
+    --orange: #fb923c;
+    --orange-soft: rgba(251, 146, 60, 0.14);
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+  header.top { padding: 2.5rem 0 1.5rem; border-bottom: 1px solid var(--border); }
+  .kicker {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .78rem; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600;
+  }
+  .kicker::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -0.02em; margin: .5rem 0 .35rem; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .subtitle { color: var(--muted); max-width: 46rem; }
+  .topline { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; margin-top: 1rem; font-size: .85rem; color: var(--faint); align-items: center; }
+  .topline a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent-border); }
+  .topline a:hover { border-bottom-style: solid; }
+
+  nav.tabs { display: flex; gap: .3rem; margin: 1.75rem 0 2rem; overflow-x: auto; border-bottom: 1px solid var(--border); }
+  nav.tabs button {
+    appearance: none; background: none; border: none; cursor: pointer;
+    font: inherit; font-size: .92rem; font-weight: 600; color: var(--muted);
+    padding: .65rem 1rem; border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+  section.tab[hidden] { display: none; }
+
+  h2 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 .35rem; }
+  h3 { font-size: 1.02rem; font-weight: 700; margin: 1.5rem 0 .5rem; }
+  .lede { color: var(--muted); margin-bottom: 1.5rem; max-width: 52rem; }
+
+  /* Chips & badges */
+  .chip {
+    display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .03em;
+    padding: .18rem .55rem; border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+  }
+  .chip.fixed   { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-border); }
+  .chip.open    { background: var(--amber-soft); color: var(--amber); border-color: rgba(245,158,11,.4); }
+  .chip.critical{ background: var(--rose-soft); color: var(--rose); border-color: rgba(244,63,94,.4); }
+  .chip.high    { background: var(--orange-soft); color: var(--orange); border-color: rgba(251,146,60,.4); }
+  .chip.medium  { background: rgba(245,158,11,.10); color: var(--amber); border-color: rgba(245,158,11,.32); }
+  .chip.low     { background: rgba(161,161,170,.12); color: var(--muted); border-color: var(--border); }
+  .chip.stack   { background: var(--card); color: var(--text); border-color: var(--border); font-weight: 600; font-family: var(--mono); font-size: .74rem; }
+
+  /* Metric cards */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .9rem; margin: 1.75rem 0; }
+  .metric { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: 1rem 1.1rem; }
+  .metric .num { font-size: 1.7rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .metric .lbl { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem 1.35rem; margin-bottom: 1rem; }
+  .panel p { color: var(--muted); font-size: .93rem; }
+  .panel p + p { margin-top: .6rem; }
+
+  code, pre { font-family: var(--mono); font-size: .84rem; }
+  code.inline { background: var(--bg-soft); border: 1px solid var(--border); border-radius: .35rem; padding: .08rem .35rem; }
+  pre.block {
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: .6rem;
+    padding: .9rem 1rem; overflow-x: auto; margin: .75rem 0; color: var(--text); line-height: 1.6;
+  }
+  pre.block .c { color: var(--faint); }
+
+  /* Findings */
+  .filters { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 0 1.25rem; }
+  .filters button {
+    appearance: none; cursor: pointer; font: inherit; font-size: .8rem; font-weight: 600;
+    color: var(--muted); background: var(--card); border: 1px solid var(--border);
+    border-radius: 999px; padding: .35rem .85rem; transition: all .15s;
+  }
+  .filters button:hover { color: var(--text); border-color: var(--faint); }
+  .filters button.active { color: var(--accent); border-color: var(--accent-border); background: var(--accent-soft); }
+  .area-head { display: flex; align-items: baseline; gap: .6rem; margin: 1.6rem 0 .7rem; }
+  .area-head:first-of-type { margin-top: 0; }
+  .area-head h3 { margin: 0; }
+  .area-head .count { font-size: .78rem; color: var(--faint); }
+  .finding { display: grid; grid-template-columns: auto 1fr auto; gap: .4rem .9rem; align-items: start;
+    background: var(--card); border: 1px solid var(--border); border-radius: .7rem;
+    padding: .85rem 1.05rem; margin-bottom: .55rem; }
+  .finding:hover { border-color: var(--faint); }
+  .finding .title { font-weight: 650; font-size: .95rem; }
+  .finding .desc { grid-column: 2; color: var(--muted); font-size: .86rem; }
+  .finding .note { grid-column: 2; font-size: .82rem; color: var(--faint); }
+  .finding .note b { color: var(--accent); font-weight: 700; }
+  .finding.open-item .note b { color: var(--amber); }
+  .finding .status { justify-self: end; }
+
+  /* Architecture */
+  .arch-svg { width: 100%; height: auto; display: block; margin: 1.25rem 0; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .8rem; }
+  .legend .item { background: var(--card); border: 1px solid var(--border); border-radius: .6rem; padding: .8rem 1rem; font-size: .87rem; color: var(--muted); }
+  .legend .item b { display: block; color: var(--text); margin-bottom: .15rem; font-size: .88rem; }
+
+  /* Testing */
+  table.simple { width: 100%; border-collapse: collapse; font-size: .89rem; margin: .75rem 0 1.25rem; }
+  table.simple th { text-align: left; color: var(--faint); font-size: .76rem; text-transform: uppercase; letter-spacing: .06em; padding: .5rem .75rem; border-bottom: 1px solid var(--border); }
+  table.simple td { padding: .6rem .75rem; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  table.simple td.num { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; white-space: nowrap; }
+
+  footer { margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border); color: var(--faint); font-size: .8rem; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; justify-content: space-between; }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 1.25rem 1rem 3rem; }
+    header.top { padding-top: 1.5rem; }
+    .finding { grid-template-columns: auto 1fr; }
+    .finding .desc, .finding .note { grid-column: 1 / -1; }
+    .finding .status { grid-row: 1; grid-column: 2; }
+  }
+  @media print {
+    body { background: #fff; color: #111; }
+    nav.tabs { display: none; }
+    section.tab { display: block !important; page-break-before: always; }
+    section.tab:first-of-type { page-break-before: avoid; }
+    .panel, .metric, .finding, .legend .item, pre.block { border-color: #ccc; background: #fafafa; }
+    .metric .num { color: #047857; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <span class="kicker">Proje İnceleme · Review &amp; Upgrade</span>
+    <h1>FinanceLens <em>Audit Report</em></h1>
+    <p class="subtitle">
+      Türkiye odaklı kişisel finans takip uygulamasının 2026-08-24 tarihli tam kapsamlı
+      incelemesi: bulunan hatalar, uygulanan düzeltmeler, mimari ve yol haritası.
+      Tüm bulgular bağımsız inceleme ajanları tarafından denetlendi; her düzeltme birim testiyle kilitlendi.
+    </p>
+    <div class="topline">
+      <span>Tarih: 24.08.2026</span>
+      <span>Dal: <code class="inline">review-upgrade</code></span>
+      <span><a href="../" title="Depo köküne dön">← Depo köküne dön</a></span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Rapor sekmeleri">
+    <button role="tab" aria-selected="true" data-tab="overview">Genel Bakış</button>
+    <button role="tab" aria-selected="false" data-tab="findings">Bulgular</button>
+    <button role="tab" aria-selected="false" data-tab="architecture">Mimari</button>
+    <button role="tab" aria-selected="false" data-tab="testing">Testler &amp; CI</button>
+    <button role="tab" aria-selected="false" data-tab="roadmap">Yol Haritası</button>
+  </nav>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section class="tab" id="tab-overview" role="tabpanel">
+    <h2>Genel Bakış</h2>
+    <p class="lede">
+      FinanceLens; hisse senedi, ETF, eurobond, altın, gümüş, nakit, gelir ve giderleri tek
+      panoda birleştiren, tüm değerleri canlı kur ile TRY'a normalize eden bir kişisel finans
+      izleyicisidir. Next.js 16 frontend + NestJS 11 API monorepo olarak yapılandırılmıştır.
+    </p>
+
+    <div class="metrics">
+      <div class="metric"><div class="num">196</div><div class="lbl">birim test · 139 API (Jest) + 57 Web (Vitest)</div></div>
+      <div class="metric"><div class="num">25 / 36</div><div class="lbl">bulgu düzeltildi · kalan 11: 4 tasarım kararı + 7 küçük kalıntı</div></div>
+      <div class="metric"><div class="num">8</div><div class="lbl">CRUD modülü · hepsi çok kiracılı güvenli</div></div>
+      <div class="metric"><div class="num">30</div><div class="lbl">commit · bu geliştirme dalında</div></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Ne yaptık?</h3>
+      <p>
+        Üç bağımsız inceleme ajanının bulduğu 36 bulgunun 25'i düzeltildi; kalan
+        11 açık kalem bilinçli olarak bırakıldı (4'ü tasarım kararı, 7'si küçük
+        kalıntı — ayrılar <b>Bulgular</b> ve <b>Yol Haritası</b> sekmelerinde).
+        Düzeltilenler arasında yanlış troy-ons
+        sabiti (altın/gümüş gram fiyatı %9 sapmalıydı), üç farklı eurobond değerleme formülü,
+        FX dönüşümü olmayan net değer toplamı, çapraz kiracı erişimi, yarış koşullu auth guard,
+        atomik olmayan yazma işlemleri, doğrulanmamış sorgu parametreleri, kırık demo (mock)
+        modu, beş farklı para formatlayıcısı, bozuk dark mode ve eksik mobil navigasyon var.
+        Her düzeltmeye eşlik eden testlerle birlikte CI artık her push'ta lint + test + build çalıştırıyor.
+      </p>
+      <p>
+        Ardından ürün kimliği yenilendi (zümrüt marka token sistemi, tema-duyarlı grafikler,
+        yeni landing sayfası) ve dokümantasyon seti (README, AGENTS.md, CONTRIBUTING, ajan
+        skill dosyası) sıfırdan doğrulandı. Detaylar <b>Bulgular</b> sekmesinde.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Teknoloji Yığını</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.5rem">
+        <span class="chip stack">Next.js 16</span><span class="chip stack">React 19</span>
+        <span class="chip stack">Tailwind v4</span><span class="chip stack">TanStack Query v5</span>
+        <span class="chip stack">Recharts</span><span class="chip stack">NestJS 11</span>
+        <span class="chip stack">Prisma 7</span><span class="chip stack">PostgreSQL · Supabase</span>
+        <span class="chip stack">Jest 30</span><span class="chip stack">Vitest</span>
+        <span class="chip stack">Turborepo · pnpm 9</span><span class="chip stack">GitHub Actions</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Hızlı Başlangıç</h3>
+      <pre class="block"><code>pnpm install                          <span class="c"># bağımlılıklar</span>
+pnpm dev                              <span class="c"># tüm uygulamalar (web :3000, api :3001, docs :3002)</span>
+pnpm lint &amp;&amp; pnpm check-types         <span class="c"># statik kontroller</span>
+pnpm test                             <span class="c"># api jest + web vitest</span>
+pnpm build                            <span class="c"># üretim derlemesi</span></code></pre>
+      <p>Demo modu için <code class="inline">apps/web/.env.local</code> içinde <code class="inline">NEXT_PUBLIC_USE_MOCK_DATA=true</code> — gerçek veritabanına dokunmadan tüm ekranlar sahte veriyle çalışır.</p>
+    </div>
+  </section>
+
+  <!-- ============ FINDINGS ============ -->
+  <section class="tab" id="tab-findings" role="tabpanel" hidden>
+    <h2>Bulgular</h2>
+    <p class="lede">
+      Denetimden çıkan tüm maddeler alan bazında gruplandırıldı. Durumlar düzeltme sonrası
+      gerçeği yansıtır: <span class="chip fixed">FIXED</span> düzeltildi ve testle kilitlendi,
+      <span class="chip open">OPEN</span> tasarım kararıyla ertelendi veya küçük kalıntıdır.
+    </p>
+    <div class="filters" id="filters"></div>
+    <div id="findings-root"></div>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section class="tab" id="tab-architecture" role="tabpanel" hidden>
+    <h2>Mimari</h2>
+    <p class="lede">
+      Turborepo monorepo: web (:3000) → api (:3001, global <code class="inline">/api</code> prefix) →
+      Supabase (PostgreSQL + Auth) ve Yahoo Finance (fiyat + FX). Demo modunda istemci katmanı
+      ağ çağrısı yapmadan yerel mock state'e düşer.
+    </p>
+
+    <svg class="arch-svg" viewBox="0 0 920 430" role="img" aria-labelledby="archTitle archDesc" xmlns="http://www.w3.org/2000/svg">
+      <title id="archTitle">FinanceLens mimari diyagramı</title>
+      <desc id="archDesc">Tarayıcıdan Next.js web uygulamasına, oradan Bearer JWT ile NestJS API'ye; API Prisma üzerinden Supabase PostgreSQL'e, Yahoo Finance'den fiyat ve FX çekiyor. Demo modunda web içi mock katmanı kullanılır.</desc>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#71717a"/>
+        </marker>
+        <marker id="arrowAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#10b981"/>
+        </marker>
+      </defs>
+      <style>
+        .node-r { fill:#18181b; stroke:#27272a; rx:10; }
+        .lbl { font: 600 13px system-ui, sans-serif; fill:#e4e4e7; }
+        .sub { font: 400 10.5px system-ui, sans-serif; fill:#a1a1aa; }
+        .edge { font: 500 10px system-ui, sans-serif; fill:#71717a; }
+        .flow { stroke:#52525b; stroke-width:1.4; fill:none; marker-end:url(#arrow); }
+        .flowA { stroke:#10b981; stroke-width:1.6; fill:none; marker-end:url(#arrowAccent); }
+      </style>
+
+      <!-- Browser -->
+      <rect x="20" y="165" width="130" height="70" rx="10" class="node-r"/>
+      <text x="85" y="196" text-anchor="middle" class="lbl">Tarayıcı</text>
+      <text x="85" y="213" text-anchor="middle" class="sub">tr-TR kullanıcı</text>
+
+      <!-- Web app -->
+      <rect x="215" y="120" width="190" height="160" rx="10" class="node-r" stroke="#10b981" stroke-opacity=".55"/>
+      <text x="310" y="148" text-anchor="middle" class="lbl">apps/web</text>
+      <text x="310" y="166" text-anchor="middle" class="sub">Next.js 16 · React 19</text>
+      <rect x="232" y="180" width="156" height="26" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="310" y="197" text-anchor="middle" class="sub">lib/api.ts — REST istemci</text>
+      <rect x="232" y="214" width="156" height="26" rx="6" fill="#09090b" stroke="#10b981" stroke-opacity=".5"/>
+      <text x="310" y="231" text-anchor="middle" class="sub">lib/api-mock.ts — demo mod</text>
+      <rect x="232" y="248" width="156" height="22" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="310" y="263" text-anchor="middle" class="sub">Supabase oturum (JWT)</text>
+
+      <!-- API -->
+      <rect x="480" y="105" width="200" height="190" rx="10" class="node-r" stroke="#10b981" stroke-opacity=".55"/>
+      <text x="580" y="132" text-anchor="middle" class="lbl">apps/api · NestJS 11</text>
+      <rect x="496" y="145" width="168" height="24" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="580" y="161" text-anchor="middle" class="sub">AuthGuard — JWT doğrulama</text>
+      <rect x="496" y="175" width="168" height="24" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="580" y="191" text-anchor="middle" class="sub">8 CRUD modülü + dashboard</text>
+      <rect x="496" y="205" width="168" height="24" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="580" y="221" text-anchor="middle" class="sub">yahoo-finance · precious-metals</text>
+      <rect x="496" y="235" width="168" height="24" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="580" y="251" text-anchor="middle" class="sub">getFxRate — 15 dk önbellek</text>
+      <rect x="496" y="265" width="168" height="22" rx="6" fill="#09090b" stroke="#27272a"/>
+      <text x="580" y="280" text-anchor="middle" class="sub">helmet + exception filter</text>
+
+      <!-- Supabase -->
+      <rect x="760" y="115" width="140" height="80" rx="10" class="node-r"/>
+      <text x="830" y="147" text-anchor="middle" class="lbl">Supabase</text>
+      <text x="830" y="164" text-anchor="middle" class="sub">Auth + PostgreSQL</text>
+      <text x="830" y="178" text-anchor="middle" class="sub">Prisma 7 adapter-pg</text>
+
+      <!-- Yahoo -->
+      <rect x="760" y="255" width="140" height="80" rx="10" class="node-r"/>
+      <text x="830" y="287" text-anchor="middle" class="lbl">Yahoo Finance</text>
+      <text x="830" y="304" text-anchor="middle" class="sub">hisse fiyat + grafik</text>
+      <text x="830" y="318" text-anchor="middle" class="sub">USDTRY / EURTRY kur</text>
+
+      <!-- Edges -->
+      <path d="M150 200 C 175 200, 190 200, 212 200" class="flow"/>
+      <text x="181" y="192" text-anchor="middle" class="edge">HTTPS</text>
+
+      <path d="M405 175 C 435 172, 450 172, 477 174" class="flowA"/>
+      <text x="440" y="163" text-anchor="middle" class="edge" fill="#10b981">Bearer REST</text>
+
+      <path d="M680 155 C 712 152, 728 152, 757 153" class="flow"/>
+      <text x="718" y="144" text-anchor="middle" class="edge">Prisma</text>
+
+      <path d="M680 270 C 712 272, 728 272, 757 272" class="flow"/>
+      <text x="714" y="258" text-anchor="middle" class="edge">fetch · 10s timeout</text>
+
+      <path d="M680 210 C 710 210, 720 195, 758 178" class="flow" stroke-dasharray="2 3"/>
+
+      <!-- demo-mode delegation inside web client layer -->
+      <path d="M224 193 C 210 193, 210 227, 224 227" class="flowA" stroke-dasharray="4 3"/>
+
+      <!-- Legend strip -->
+      <text x="20" y="392" class="edge" fill="#10b981">— API veri akışı</text>
+      <text x="150" y="392" class="edge">— dış servis / auth</text>
+      <text x="290" y="392" class="edge">┈ demo mod: lib/api.ts → api-mock.ts (ağ yok, yerel state)</text>
+      <text x="20" y="414" class="sub">Demo modu: NEXT_PUBLIC_USE_MOCK_DATA=true iken lib/api.ts lib/api-mock.ts'e delege eder; CRUD module-level dizileri mutate eder.</text>
+    </svg>
+
+    <div class="legend">
+      <div class="item"><b>FX normalizasyonu</b>Dashboard overview tüm USD/EUR pozisyonlarını <code class="inline">getFxRate()</code> ile TRY'a çevirir; yanıt <code class="inline">fxRates</code> ve bayat kur uyarıları içerir.</div>
+      <div class="item"><b>Çok kiracılılık</b>Her yazma işlemi <code class="inline">{ id, userId }</code> filtresiyle atomik <code class="inline">updateMany/deleteMany</code>; etkilenen satır 0 ise 404.</div>
+      <div class="item"><b>Güvenlik</b>Global <code class="inline">APP_GUARD</code> JWT zorunlu (yalnızca health public), helmet, sanitize edilmiş hata gövdeleri, prod'da kapalı Swagger.</div>
+      <div class="item"><b>Demo modu</b>Env flag'i ile REST istemci yerine mock katmanı: aynı enum'lar, kalıcı CRUD, sıfır altyapı gereksinimi.</div>
+    </div>
+  </section>
+
+  <!-- ============ TESTING ============ -->
+  <section class="tab" id="tab-testing" role="tabpanel" hidden>
+    <h2>Testler &amp; CI</h2>
+    <p class="lede">
+      Her iki uygulamanın da kendi birim test süiti vardır ve Turbo görevi <code class="inline">test</code>
+      üzerinden kökten tek komutla çalışır. CI iki paralel job (api, web) halinde her push/PR'da lint → test → build zincirini koşar.
+    </p>
+
+    <table class="simple">
+      <thead><tr><th>Süit</th><th>Çalıştırıcı</th><th>Dosya</th><th>Test</th><th>Kapsam odağı</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline">apps/api</code></td><td>Jest 30</td><td class="num">20 süit</td><td class="num">139</td><td>troy-ons dönüşümü, eurobond değerleme + kupon kesri, FX ayrıştırma/önbellek, TRY agregasyonu, atomic owned writes, propertyId tenancy, DTO/param doğrulama, AuthGuard dalları (P2002 yarışı dahil), exception filter, mock CRUD davranışı</td></tr>
+        <tr><td><code class="inline">apps/web</code></td><td>Vitest</td><td class="num">4 dosya</td><td class="num">57</td><td>tr-TR formatlayıcılar (para/tarih/yüzde), etiket haritaları ↔ enum tamlığı, api-client URL kurulumu, demo mod CRUD mutasyonu + varsayılan flag</td></tr>
+      </tbody>
+    </table>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Nasıl çalıştırılır?</h3>
+      <pre class="block"><code>pnpm test                       <span class="c"># kökten: turbo run test → api jest + web vitest</span>
+pnpm --filter api test          <span class="c"># yalnızca API süiti</span>
+pnpm --filter web test          <span class="c"># yalnızca web süiti</span>
+pnpm --filter api test -- --watch   <span class="c"># jest watch modu</span></code></pre>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">CI Hattı — <code class="inline">.github/workflows/ci.yml</code></h3>
+      <p>
+        Node 22 üzerinde iki paralel job: <b>web</b> (kurulum → prisma generate → check-types → lint → test → build)
+        ve <b>api</b> (kurulum → prisma generate → lint → test → build). Kök gate'i yerelde aynen tekrarlar:
+      </p>
+      <pre class="block"><code>pnpm lint &amp;&amp; pnpm check-types &amp;&amp; pnpm test &amp;&amp; pnpm build</code></pre>
+      <p>Bu raporun yazıldığı dalda dördü de yeşildir: 139 + 57 = <b>196 test geçti</b>, lint sıfır uyarı politikası (<code class="inline">--max-warnings 0</code>), tip kontrolü temiz, üç uygulama da derleniyor.</p>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section class="tab" id="tab-roadmap" role="tabpanel" hidden>
+    <h2>Yol Haritası</h2>
+    <p class="lede">
+      Ertelenen kalemler bilinçli tasarım kararlarıdır ve aşağıda gerekçeleriyle listelenir;
+      gelecek fikirleri ise ürünü bir sonraki seviyeye taşıyacak adaylardır.
+    </p>
+
+    <h3>Ertelenenler (OPEN)</h3>
+    <div class="finding open-item">
+      <span class="chip high">high</span>
+      <span class="title">Türkiye vergi motoru</span>
+      <span class="status chip open">OPEN</span>
+      <span class="note"><b>Erteleme gerekçesi:</b> stopaj / temettü tevkifatı hesaplama kuralları ürün kararı gerektiriyor; mevcut <code class="inline">taxWithheld</code> alanı tutarlı tutuluyor, motor sonraki sürüm için belgelendi.</span>
+    </div>
+    <div class="finding open-item">
+      <span class="chip medium">medium</span>
+      <span class="title">Decimal-string para refactoru (API geneli)</span>
+      <span class="status chip open">OPEN</span>
+      <span class="note"><b>Erteleme gerekçesi:</b> float para toplamı repo-geneli konvansiyon; Prisma Decimal alanları Number'a çevrilerek işleniyor. Bilinen sınırlama olarak dokümante edildi.</span>
+    </div>
+    <div class="finding open-item">
+      <span class="chip medium">medium</span>
+      <span class="title">Playwright e2e süiti</span>
+      <span class="status chip open">OPEN</span>
+      <span class="note"><b>Erteleme gerekçesi:</b> kapsam kararı — birim testler mantıksal çekirdeği kilitliyor; tarayıcı-içi akış testleri ayrı bir çalışma olarak planlanacak.</span>
+    </div>
+    <div class="finding open-item">
+      <span class="chip low">low</span>
+      <span class="title">Redis önbellekleme katmanı</span>
+      <span class="status chip open">OPEN</span>
+      <span class="note"><b>Erteleme gerekçesi:</b> tasarımda kapatıldı — ölü ioredis/cache-manager bağımlılıkları kaldırıldı; FX ve metal fiyatlarında 15 dk'lık süreç-içi Map cache yeterli görüldü.</span>
+    </div>
+
+    <h3>Bilinen küçük kalıntılar (OPEN · minor)</h3>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">Altın/gümüş gram fiyatı 2 ondalık gösteriyor</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> 3. ondalık için formatlayıcıya decimals seçeneği eklenecek.</span></div>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">Çoklu para birimi toplamları ₺ sembolü altında</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> TRY normalize toplamlar için belgelenmiş konvansiyon; satır bazında orijinal para birimi korunur.</span></div>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">Incomes mock update/delete parite testleri eksik</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> create/delete yolu testli; update aynı count:0 patikasını kullanıyor.</span></div>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">Demo özet/overview statik</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> mutasyona uğramış listelerden değil, sabit özetlerden hesaplanıyor; liste ekranları tutarlı.</span></div>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">Grafik dilim değerleri ekran okuyucuya kapalı</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> donut <code class="inline">role=img</code> + toplam aria-label içeriyor; dilim bazlı değerler sonraki a11y turunda.</span></div>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">aria-label'lar <code>lang=tr</code> altında İngilizce</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> Phase 2 metin turunda Türkçe'ye çevrilecek.</span></div>
+    <div class="finding open-item"><span class="chip low">minor</span><span class="title">Eski mock satırında percent-stil couponRate (5.75)</span><span class="status chip open">OPEN</span><span class="note"><b>Not:</b> konvansiyon kesir (0.0575); SKILL.md bu satırı uyarı olarak işaretledi, demo verisi yenilenince kalkar.</span></div>
+
+    <h3>Teslim Edilenler (25.08.2026)</h3>
+    <div class="legend">
+      <div class="item"><b>AI Finans Asistanı</b>Deterministik FIRE projeksiyon motoru + TR/ABD/küresel tarihsel stres testleri + BYO-key LLM anlatımı; mobil nav'da asistan CTA'sı ile birlikte shipping'e girdi.</div>
+      <div class="item"><b>Neon marka kimliği</b>#70FFD2 / #FFCC4D / #FF9137 / #FFFC8C paletine geçiş; floating mobil navigasyon yenilendi.</div>
+    </div>
+
+    <h3>Gelecek Fikirleri</h3>
+    <div class="legend">
+      <div class="item"><b>i18n çıkarma</b>Aria-label ve UI metinlerinin mesaj kataloğuna taşınması; tr-TR dışı yereller için zemin.</div>
+      <div class="item"><b>Gerçek zamanlı fiyatlar</b>WebSocket/SSE ile canlı hisse ve kur akışı; mevcut 15 dk cache'in üstünde.</div>
+      <div class="item"><b>Vergi motoru</b>Stopaj ve temettü tevkifatının gerçek hesaplamayla desteklenmesi.</div>
+      <div class="item"><b>e2e süiti</b>Kritik kullanıcı akışlarının (login → CRUD → dashboard) Playwright ile kapsanması.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span>FinanceLens · Proje İnceleme Raporu · 24.08.2026</span>
+    <span>MIT lisansı · <a href="../" style="color:var(--accent)">depo kökü</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Tabs ---------- */
+  var tabs = document.querySelectorAll("nav.tabs [role=tab]");
+  var panels = document.querySelectorAll("section.tab");
+  function selectTab(name) {
+    tabs.forEach(function (t) {
+      var on = t.getAttribute("data-tab") === name;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    panels.forEach(function (p) {
+      p.hidden = p.id !== "tab-" + name;
+    });
+    window.scrollTo({ top: 0 });
+  }
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () { selectTab(t.getAttribute("data-tab")); });
+  });
+
+  /* ---------- Findings data ---------- */
+  var FINDINGS = [
+    /* Backend */
+    { area: "Backend", sev: "critical", status: "fixed",
+      title: "Yanlış troy-ons sabiti (28.3495)",
+      desc: "Avoirdupois ons kullanılması nedeniyle altın/gümüş TRY/gram fiyatları ~%9 fazla görünüyordu.",
+      note: "GRAMS_PER_TROY_OUNCE = 31.1035 olarak düzeltildi; dönüşüm matematiği birim testlerle kilitlendi." },
+    { area: "Backend", sev: "critical", status: "fixed",
+      title: "Üç tutarsız eurobond değerlemesi",
+      desc: "Servis ÷100 bölüyor, DTO mutlak fiyat diyordu, dashboard faceValue×quantity kullanıyordu.",
+      note: "currentValue = faceValue × quantity olarak birleştirildi; dashboard formülü servisle hizalandı." },
+    { area: "Backend", sev: "high", status: "fixed",
+      title: "Kupon oranı yüzde/kesir belirsizliği",
+      desc: "Schema Decimal(5,4) kesri ima ediyordu ama frekans yok, doküman yüzde örnekliyordu.",
+      note: "Kesir konvansiyonu (0.0525 = %5,25) servise ve DTO örneklerine işlendi; kupon geliri formülü testlendi." },
+    { area: "Backend", sev: "critical", status: "fixed",
+      title: "Net worth FX'siz USD+EUR+TRY toplamı",
+      desc: "Farklı para birimlerindeki varlıklar ham toplanıyordu; sonuç anlamsız çıkıyordu.",
+      note: "getFxRate() + TRY-normalize overview; yanıtta fxRates ve bayat kur uyarıları, FX hatasında graceful fallback." },
+    { area: "Backend", sev: "critical", status: "fixed",
+      title: "propertyId kiracı kontrolü yok",
+      desc: "Başka kullanıcının mülküne gelir/gider bağlanabiliyor; FK ihlalleri 500 üretiyordu.",
+      note: "propertyId sahiplik doğrulaması eklendi → yabancı mülk için BadRequestException." },
+    { area: "Backend", sev: "high", status: "fixed",
+      title: "AuthGuard lazy user-create yarışı",
+      desc: "Eşzamanlı ilk isteklerde P2002 → 500; email! null-safety riski.",
+      note: "P2002 yakalanıp refetch yapılıyor; email yoksa 401 — yarış dalları unit-testli." },
+    { area: "Backend", sev: "high", status: "fixed",
+      title: "findFirst-then-write TOCTOU deseni",
+      desc: "Tüm varlık modüllerinde kontrol-yaz arası yarış P2025/500 üretiyor, $transaction hiç kullanılmıyordu.",
+      note: "Tüm servislere atomic owned write: updateMany/deleteMany({id, userId}) + count kontrolü → 404." },
+    { area: "Backend", sev: "high", status: "fixed",
+      title: "Doğrulanmamış sorgu parametreleri",
+      desc: "Ham query → Prisma 500; Yahoo proxy parametreleri encode edilmiyor; previousClose sıfıra bölünme riski.",
+      note: "ParseIntPipe/ParseUUIDPipe/IsEnum/IsDateString + interval whitelist + encode + sıfır bölme koruması." },
+    { area: "Backend", sev: "medium", status: "fixed",
+      title: "Timeoutsiz fetch, sızan hatalar, açık Swagger",
+      desc: "Upstream yavaşlarsa istek asılı kalıyor, ham hata mesajları sızıyor, helmet/filter yok.",
+      note: "AbortSignal.timeout(10s), global exception filter (sanitize JSON), helmet, Swagger yalnız non-prod." },
+    { area: "Backend", sev: "low", status: "fixed",
+      title: "Ölü redis/cache-manager bağımlılıkları",
+      desc: "Kullanılmayan ioredis + cache-manager yığını declared ama hiç import edilmemişti.",
+      note: "Ölü bağımlılıklar kaldırıldı; el yapımı Map cache (15 dk TTL) kaldı; docs portu 3002'ye taşındı." },
+    { area: "Backend", sev: "medium", status: "fixed",
+      title: "Yalnızca 3 test dosyası",
+      desc: "Eurobond/dashboard/precious-metals mantığının hiçbiri testlenmiyordu.",
+      note: "Bugün 20 Jest süiti / 139 test; tüm kritik hesap ve güvenlik dalları kapsamda." },
+
+    /* Frontend */
+    { area: "Frontend", sev: "critical", status: "fixed",
+      title: "Demo modunda kırık yazma işlemleri",
+      desc: "Mock CRUD dizileri hiç mutate etmiyordu; USE_MOCK_DATA varsayılan true idi.",
+      note: "Mock'lar module-level dizileri mutate ediyor; default false; mutation davranışı Vitest'le kilitli." },
+    { area: "Frontend", sev: "high", status: "fixed",
+      title: "Enum casing uyuşmazlıkları (Salary/SALARY, FOOD/GROCERIES…)",
+      desc: "Mock ↔ formlar ↔ görüntüleme haritaları farklı casing kullanınca filtre ve kayıt sessizce kırılıyordu.",
+      note: "Tek casing (SALARY, GROCERIES, SEMIANNUAL…) mock-data, formlar ve label haritalarında birleştirildi." },
+    { area: "Frontend", sev: "high", status: "fixed",
+      title: "Beş ayrık formatCurrency + sabit $ + en-US tarih",
+      desc: "Sayfa başına kopyalanmış formatlayıcılar; API TRY dönerken $ basılıyor, tarih en-US.",
+      note: "lib/format.ts tek kaynak: Intl tr-TR, para birimi duyarlı ₺, DD.MM.YYYY, %12,50 yüzde stili." },
+    { area: "Frontend", sev: "medium", status: "fixed",
+      title: "Dark mode bozuk (ham palette sınıfları)",
+      desc: "~20+ lokasyonda bg-gray/bg-white ve hardcoded chart renkleri karanlık temada okunmuyordu.",
+      note: "Token sweep + emerald marka token sistemi; stock chart tema-duyarlı renklere geçirildi." },
+    { area: "Frontend", sev: "medium", status: "fixed",
+      title: "Tam sayfa spinner + tutarsız hata durumları",
+      desc: "Sessiz $0 özet hataları, ele alınmayan delete hataları, sayfa-başı özel loading JSX'i.",
+      note: "Paylaşılan StatCard/EmptyState/ErrorState(skeleton) primitive'leri; delete mutasyonlarına hata toast'u." },
+    { area: "Frontend", sev: "medium", status: "fixed",
+      title: "Mobil navigasyon 9 rotadan 5'ini gösteriyordu",
+      desc: "/status dahil dört rota küçük ekranda hiç erişilemiyordu.",
+      note: "Mobil nav tüm rotaları kapsıyor; /status bağlantısı geri geldi." },
+    { area: "Frontend", sev: "medium", status: "fixed",
+      title: "Erişilebilirlik temelleri eksik",
+      desc: "Icon butonlarda aria-label yok, inputlar etiketsiz, lang=en, SymbolSearch klavyeyle çalışmıyor.",
+      note: "aria-label'lar + input etiketleri + html lang=tr + SymbolSearch Escape/ok tuşu desteği eklendi." },
+    { area: "Frontend", sev: "medium", status: "fixed",
+      title: "Web tarafında sıfır test",
+      desc: "Hiç test koşucusu kurulu değildi.",
+      note: "Vitest kuruldu; 4 dosya / 57 test — formatlayıcılar, enum haritaları, URL kurulumu, mock CRUD." },
+    { area: "Frontend", sev: "high", status: "fixed",
+      title: "Login yarışı, JSON.parse çökmesi, status sayfası çökmesi, price-fetch yarışı",
+      desc: "Çift navigasyon yarışı; AuthProvider'da korumasız JSON.parse; optional chaining'siz breakdown erişimi; iptal edilmeyen fiyat effect'leri.",
+      note: "Try/catch safe-parse, tek navigation sahibi, optional chaining guard'ları, AbortController cleanup." },
+
+    /* Repo */
+    { area: "Repo", sev: "high", status: "fixed",
+      title: "README var olmayan pnpm test'i vaat ediyordu",
+      desc: "turbo'da test görevi yok, CI'da api job/test yoktu.",
+      note: "turbo.json'a test task'ı, kökte pnpm test, CI'a api job (lint→test→build) eklendi; README yeniden yazıldı." },
+    { area: "Repo", sev: "medium", status: "fixed",
+      title: "CLAUDE.md bayat ve gitignored",
+      desc: "Hayali paketler, Redis iddiası, eksik rotalar — ajanları yanlış yönlendiriyordu.",
+      note: "AGENTS.md tracked canonical rehber oldu; CLAUDE.md kısa pointer'a indirildi." },
+    { area: "Repo", sev: "low", status: "fixed",
+      title: "MOCK_DATA_GUIDE yanlış toggle yöntemi + şablon README'ler + LICENSE 2024",
+      desc: "Demo modu env-var yöntemiyle çelişen dokümantasyon; boilerplate web/docs README'leri; eski lisans yılı.",
+      note: "Rehberler düzeltildi, app README'leri gerçek içerikle yazıldı, LICENSE 2026, CONTRIBUTING eklendi." },
+    { area: "Repo", sev: "low", status: "fixed",
+      title: "packages/ui ölü starter stub'ı",
+      desc: "web, hiç kullanmadığı @repo/ui'ye bağımlıydı; gerçek UI components/ altında yaşıyor.",
+      note: "@repo/ui bağımlılığı web'den kaldırıldı; kullanılmayan sidebar/form/use-mobile kodları silindi." },
+    { area: "Repo", sev: "low", status: "fixed",
+      title: "docs uygulaması dev portu API ile çakışıyordu (3001)",
+      desc: "Aynı anda docs + api çalıştıran geliştiricide port çakışması.",
+      note: "docs dev/start portları 3002'ye alındı." },
+
+    /* Ertelenen — tasarım kararı */
+    { area: "Ertelenen", sev: "high", status: "open",
+      title: "Türkiye vergi motoru (stopaj / tevkifat)",
+      desc: "Temettü ve stopaj hesaplamaları gerçek kurallarla yapılmıyor; taxWithheld alanı yalnızca tutarlı tutuluyor.",
+      note: "Erteleme gerekçesi: hesaplama kuralları ürün kararı gerektiriyor — sonraki sürüm için belgelendi (tasarım kararı)." },
+    { area: "Ertelenen", sev: "medium", status: "open",
+      title: "Decimal-string para refactoru (API geneli)",
+      desc: "Para toplamları float konvansiyonuyla yapılıyor; Prisma Decimal alanları Number'a çevriliyor.",
+      note: "Bilinen sınırlama olarak dokümante edildi (tasarım kararı)." },
+    { area: "Ertelenen", sev: "medium", status: "open",
+      title: "Playwright e2e süiti",
+      desc: "Tarayıcı-içi kritik akışlar (login → CRUD → dashboard) otomatik test kapsamı dışında.",
+      note: "Birim testler mantıksal çekirdeği kilitliyor; e2e ayrı çalışma olarak planlandı (tasarım kararı)." },
+    { area: "Ertelenen", sev: "low", status: "open",
+      title: "Redis önbellekleme katmanı",
+      desc: "Dağıtık cache yok; FX/metal fiyatları 15 dk süreç-içi Map cache'te.",
+      note: "Tasarımda kapatıldı: ölü ioredis/cache-manager bağımlılıkları kaldırıldı, süreç-içi cache yeterli görüldü." },
+
+    /* Küçük kalıntılar */
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "Altın/gümüş gram fiyatı 2 ondalık gösteriyor",
+      desc: "Gram başına fiyatta 3. ondalık kayboluyor.",
+      note: "formatCurrency'ye decimals seçeneği sonraki turda eklenecek (minor)." },
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "Çoklu para birimi toplamları ₺ sembolü altında",
+      desc: "TRY normalize edilmiş toplamlar tek sembolle gösteriliyor.",
+      note: "Belgelenmiş konvansiyon; satır bazında orijinal para birimi korunuyor (minor)." },
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "Incomes mock update/delete parite testleri eksik",
+      desc: "Demo mock'un create/delete yolu testli; incomes update/delete parite testi yazılmadı.",
+      note: "Update aynı count:0 patikasını kullanıyor; parite testleri eklenecek (minor)." },
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "Demo özet/overview statik",
+      desc: "Demo modunda özet kartları mutasyona uğramış listelerden değil sabit verilerden geliyor.",
+      note: "Liste ekranları tutarlı; özetler dinamikleştirilecek (minor)." },
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "Grafik dilim değerleri ekran okuyucuya kapalı",
+      desc: "Donut grafik role=img + toplam aria-label içeriyor ama dilim bazlı değerler SR'a ulaşmıyor.",
+      note: "Sonraki a11y turunda dilim etiketleri eklenecek (minor)." },
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "aria-label'lar lang=tr altında İngilizce",
+      desc: "html lang=tr olmasına rağmen ikon buton aria-label metinleri İngilizce.",
+      note: "Phase 2 metin/i18n turunda çevrilecek (minor)." },
+    { area: "Küçük Kalıntılar", sev: "low", status: "open",
+      title: "Eski mock satırında percent-stil couponRate (5.75)",
+      desc: "Konvansiyon kesir (0.0575); eski demo satırı yüzde stilinde duruyor.",
+      note: "SKILL.md uyarıyla işaretledi; demo verisi yenilenince kalkacak (minor)." }
+  ];
+
+  var AREAS = ["Backend", "Frontend", "Repo", "Ertelenen", "Küçük Kalıntılar"];
+  var SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+  var FILTERS = [
+    { key: "all", label: "Tümü" },
+    { key: "open", label: "Açık (ertelenen)" },
+    { key: "Backend", label: "Backend" },
+    { key: "Frontend", label: "Frontend" },
+    { key: "Repo", label: "Repo" }
+  ];
+
+  var root = document.getElementById("findings-root");
+  var filtersEl = document.getElementById("filters");
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function render(filter) {
+    var items = FINDINGS.filter(function (f) {
+      if (filter === "all") return true;
+      if (filter === "open") return f.status === "open";
+      return f.area === filter;
+    }).sort(function (a, b) {
+      return SEV_ORDER[a.sev] - SEV_ORDER[b.sev];
+    });
+
+    if (filter === "all" || filter === "open") {
+      root.innerHTML = AREAS.map(function (area) {
+        var group = items.filter(function (f) { return f.area === area; });
+        if (!group.length) return "";
+        return head(area, group.length) + group.map(card).join("");
+      }).join("");
+    } else {
+      root.innerHTML = head(filter, items.length) + items.map(card).join("");
+    }
+  }
+
+  function head(area, n) {
+    return '<div class="area-head"><h3>' + esc(area) +
+      '</h3><span class="count">' + n + ' madde</span></div>';
+  }
+
+  function card(f) {
+    var cls = f.status === "fixed" ? "" : " open-item";
+    return '<article class="finding' + cls + '">' +
+      '<span class="chip ' + esc(f.sev) + '">' + esc(f.sev.toUpperCase()) + "</span>" +
+      '<span class="title">' + esc(f.title) + "</span>" +
+      '<span class="status chip ' + (f.status === "fixed" ? "fixed" : "open") + '">' +
+        (f.status === "fixed" ? "FIXED" : "OPEN") + "</span>" +
+      '<span class="desc">' + esc(f.desc) + "</span>" +
+      '<span class="note"><b>' + (f.status === "fixed" ? "Düzeltme:" : "Durum:") + "</b> " + esc(f.note) + "</span>" +
+      "</article>";
+  }
+
+  FILTERS.forEach(function (f, i) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = f.label;
+    b.setAttribute("data-key", f.key);
+    if (i === 0) b.classList.add("active");
+    b.addEventListener("click", function () {
+      filtersEl.querySelectorAll("button").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      render(f.key);
+    });
+    filtersEl.appendChild(b);
+  });
+
+  render("all");
+})();
+</script>
+</body>
+</html>

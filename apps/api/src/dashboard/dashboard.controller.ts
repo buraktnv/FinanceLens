@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { CurrentUser } from '../auth';
+import { LIMIT_PIPE } from '../common/pipes';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth()
@@ -17,11 +18,8 @@ export class DashboardController {
   @Get('transactions')
   getRecentTransactions(
     @CurrentUser('id') userId: string,
-    @Query('limit') limit?: string,
+    @Query('limit', LIMIT_PIPE) limit?: number,
   ) {
-    return this.dashboardService.getRecentTransactions(
-      userId,
-      limit ? parseInt(limit, 10) : 10,
-    );
+    return this.dashboardService.getRecentTransactions(userId, limit ?? 10);
   }
 }

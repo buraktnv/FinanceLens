@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateGoldDto, UpdateGoldDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -36,17 +36,8 @@ export class GoldService {
   }
 
   async update(userId: string, id: string, updateGoldDto: UpdateGoldDto) {
-    // First verify ownership
-    const gold = await this.prisma.gold.findFirst({
+    const updated = await this.prisma.gold.updateMany({
       where: { id, userId },
-    });
-
-    if (!gold) {
-      return null;
-    }
-
-    return this.prisma.gold.update({
-      where: { id },
       data: {
         ...(updateGoldDto.name && { name: updateGoldDto.name }),
         ...(updateGoldDto.quantity !== undefined && {
@@ -69,21 +60,21 @@ export class GoldService {
         }),
       },
     });
+    if (updated.count === 0)
+      throw new NotFoundException('Gold holding not found');
+
+    const gold = await this.prisma.gold.findUnique({ where: { id } });
+    if (!gold) throw new NotFoundException('Gold holding not found');
+
+    return gold;
   }
 
-  async remove(userId: string, id: string) {
-    // First verify ownership
-    const gold = await this.prisma.gold.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.gold.deleteMany({
       where: { id, userId },
     });
-
-    if (!gold) {
-      return null;
-    }
-
-    return this.prisma.gold.delete({
-      where: { id },
-    });
+    if (result.count === 0)
+      throw new NotFoundException('Gold holding not found');
   }
 
   // Get gold summary

@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsDateString,
   Min,
+  Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -28,7 +29,11 @@ export class CreateEurobondDto {
   @Min(0)
   faceValue: number;
 
-  @ApiProperty({ example: 980, description: 'Price paid per bond' })
+  @ApiProperty({
+    example: 980,
+    description:
+      'Absolute price paid per bond in the bond currency (not a percentage of face value)',
+  })
   @IsNumber()
   @Min(0)
   purchasePrice: number;
@@ -39,11 +44,15 @@ export class CreateEurobondDto {
   quantity: number;
 
   @ApiProperty({
-    example: 5.25,
-    description: 'Annual coupon rate as a percentage',
+    example: 0.0525,
+    description:
+      'Annual coupon rate as a decimal fraction (0.0525 = 5.25% of face value)',
   })
   @IsNumber()
   @Min(0)
+  @Max(1, {
+    message: 'Kupon oranı ondalık kesir olmalı (örn. 0.0525)',
+  })
   couponRate: number;
 
   @ApiPropertyOptional({
@@ -63,7 +72,10 @@ export class CreateEurobondDto {
   @IsDateString()
   purchaseDate: string;
 
-  @ApiProperty({ example: '2030-01-15', description: 'Maturity date of the bond' })
+  @ApiProperty({
+    example: '2030-01-15',
+    description: 'Maturity date of the bond',
+  })
   @IsDateString()
   maturityDate: string;
 

@@ -1,13 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIncomeDto, UpdateIncomeDto } from './dto';
-import { Prisma } from '@prisma/client';
+import { IncomeType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class IncomesService {
   constructor(private prisma: PrismaService) {}
 
+  private async assertPropertyOwnership(userId: string, propertyId?: string) {
+    if (!propertyId) return;
+    const property = await this.prisma.property.findFirst({
+      where: { id: propertyId, userId },
+    });
+    if (!property) throw new BadRequestException('Invalid property');
+  }
+
   async create(userId: string, dto: CreateIncomeDto) {
+    await this.assertPropertyOwnership(userId, dto.propertyId);
+
     return this.prisma.income.create({
       data: {
         userId,
@@ -29,9 +43,9 @@ export class IncomesService {
 
   async findAll(
     userId: string,
-    filters?: { type?: string; startDate?: string; endDate?: string },
+    filters?: { type?: IncomeType; startDate?: string; endDate?: string },
   ) {
-    const where: any = { userId };
+    const where: Prisma.IncomeWhereInput = { userId };
 
     if (filters?.type) {
       where.type = filters.type;
@@ -57,13 +71,10 @@ export class IncomesService {
   }
 
   async update(userId: string, id: string, dto: UpdateIncomeDto) {
-    const income = await this.prisma.income.findFirst({
-      where: { id, userId },
-    });
-    if (!income) return null;
+    await this.assertPropertyOwnership(userId, dto.propertyId);
 
-    return this.prisma.income.update({
-      where: { id },
+    const updated = await this.prisma.income.updateMany({
+      where: { id, userId },
       data: {
         ...(dto.amount !== undefined && {
           amount: new Prisma.Decimal(dto.amount),
@@ -77,16 +88,23 @@ export class IncomesService {
         ...(dto.propertyId !== undefined && { propertyId: dto.propertyId }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
+    });
+    if (updated.count === 0) throw new NotFoundException('Income not found');
+
+    const income = await this.prisma.income.findUnique({
+      where: { id },
       include: { property: true },
     });
+    if (!income) throw new NotFoundException('Income not found');
+
+    return income;
   }
 
-  async remove(userId: string, id: string) {
-    const income = await this.prisma.income.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.income.deleteMany({
       where: { id, userId },
     });
-    if (!income) return null;
-    return this.prisma.income.delete({ where: { id } });
+    if (result.count === 0) throw new NotFoundException('Income not found');
   }
 
   async getSummary(userId: string, month?: number, year?: number) {

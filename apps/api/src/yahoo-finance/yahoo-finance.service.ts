@@ -1,4 +1,23 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+
+export type FxPair =
+  | 'USDTRY'
+  | 'EURTRY'
+  | 'GBPTRY'
+  | 'CHFTRY'
+  | 'JPYTRY'
+  | 'AUDTRY';
+
+export interface FxRate {
+  rate: number;
+  fetchedAt: string;
+}
 
 export interface YahooQuote {
   symbol: string;
@@ -17,9 +36,79 @@ export interface YahooSearchResult {
   exchange: string;
 }
 
+/**
+ * Upstream Yahoo Finance payloads are genuinely dynamic third-party JSON, so
+ * they are parsed into these shapes and trusted only after the explicit
+ * runtime guards below.
+ */
+interface YahooSearchQuote {
+  symbol: string;
+  shortname?: string;
+  longname?: string;
+  quoteType?: string;
+  exchange?: string;
+}
+
+interface YahooSearchResponse {
+  quotes?: YahooSearchQuote[];
+}
+
+export interface YahooChartMeta {
+  symbol: string;
+  longName?: string;
+  regularMarketPrice?: number;
+  previousClose?: number;
+  currency: string;
+  marketState: string;
+}
+
+interface YahooChartResponse<Result> {
+  chart?: { result?: Result[] };
+}
+
+export interface YahooHistoricalResult {
+  meta?: Partial<YahooChartMeta>;
+  timestamp?: number[];
+  indicators?: {
+    quote?: Array<{
+      open?: Array<number | null>;
+      high?: Array<number | null>;
+      low?: Array<number | null>;
+      close?: Array<number | null>;
+      volume?: Array<number | null>;
+    }>;
+    adjclose?: Array<{ adjclose?: Array<number | null> }>;
+  };
+}
+
 @Injectable()
 export class YahooFinanceService {
+  private static readonly fxCache = new Map<
+    string,
+    { rate: number; fetchedAt: string; expiry: number }
+  >();
+  private static readonly FX_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
   private readonly baseUrl = 'https://query1.finance.yahoo.com';
+
+  private static readonly ALLOWED_INTERVALS = ['1d', '1wk', '1mo'] as const;
+
+  /**
+   * Whitelist the chart interval before it is interpolated into the upstream
+   * URL, so arbitrary/path-like values can never reach Yahoo Finance.
+   */
+  private assertValidInterval(interval: string): string {
+    if (
+      !YahooFinanceService.ALLOWED_INTERVALS.includes(
+        interval as (typeof YahooFinanceService.ALLOWED_INTERVALS)[number],
+      )
+    ) {
+      throw new BadRequestException(
+        `Invalid interval '${interval}'. Allowed values: ${YahooFinanceService.ALLOWED_INTERVALS.join(', ')}`,
+      );
+    }
+    return interval;
+  }
 
   /**
    * Search for stocks/ETFs by symbol or name
@@ -28,7 +117,9 @@ export class YahooFinanceService {
     try {
       const url = `${this.baseUrl}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         throw new HttpException(
@@ -37,13 +128,13 @@ export class YahooFinanceService {
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as YahooSearchResponse;
 
       if (!data.quotes || data.quotes.length === 0) {
         return [];
       }
 
-      return data.quotes.map((quote: any) => ({
+      return data.quotes.map((quote) => ({
         symbol: quote.symbol,
         name: quote.shortname || quote.longname || quote.symbol,
         type: quote.quoteType || 'EQUITY',
@@ -52,6 +143,10 @@ export class YahooFinanceService {
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
+      }
+      const errorName = (error as { name?: string })?.name;
+      if (errorName === 'TimeoutError' || errorName === 'AbortError') {
+        throw new ServiceUnavailableException('Yahoo Finance search timed out');
       }
       throw new HttpException(
         'Failed to search symbol',
@@ -67,7 +162,9 @@ export class YahooFinanceService {
     try {
       const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         throw new HttpException(
@@ -76,7 +173,9 @@ export class YahooFinanceService {
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as YahooChartResponse<{
+        meta: YahooChartMeta;
+      }>;
 
       if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
         throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);
@@ -84,17 +183,18 @@ export class YahooFinanceService {
 
       const result = data.chart.result[0];
       const meta = result.meta;
-      const quote = result.indicators?.quote?.[0];
+      const price = Number(meta.regularMarketPrice ?? 0);
+      const previousClose = Number(meta.previousClose ?? 0);
 
       return {
         symbol: meta.symbol,
         name: meta.longName || meta.symbol,
-        regularMarketPrice: meta.regularMarketPrice,
-        regularMarketChange: meta.regularMarketPrice - meta.previousClose,
+        regularMarketPrice: price,
+        regularMarketChange: price - previousClose,
         regularMarketChangePercent:
-          ((meta.regularMarketPrice - meta.previousClose) /
-            meta.previousClose) *
-          100,
+          previousClose > 0
+            ? ((price - previousClose) / previousClose) * 100
+            : 0,
         currency: meta.currency,
         marketState: meta.marketState,
       };
@@ -110,6 +210,53 @@ export class YahooFinanceService {
   }
 
   /**
+   * Get FX rate (TRY per unit of pair base currency) with 15 min cache
+   */
+  async getFxRate(pair: FxPair): Promise<FxRate> {
+    const cached = YahooFinanceService.fxCache.get(pair);
+    if (cached && cached.expiry > Date.now()) {
+      return { rate: cached.rate, fetchedAt: cached.fetchedAt };
+    }
+
+    try {
+      const url = `${this.baseUrl}/v8/finance/chart/${pair}=X`;
+
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!response.ok) {
+        throw new ServiceUnavailableException('FX rate service unavailable');
+      }
+
+      const data = (await response.json()) as {
+        chart?: { result?: Array<{ meta?: { regularMarketPrice?: unknown } }> };
+      };
+      const rate = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+
+      if (typeof rate !== 'number' || !Number.isFinite(rate)) {
+        throw new ServiceUnavailableException('FX rate unavailable');
+      }
+
+      const entry = {
+        rate,
+        fetchedAt: new Date().toISOString(),
+        expiry: Date.now() + YahooFinanceService.FX_CACHE_TTL,
+      };
+      YahooFinanceService.fxCache.set(pair, entry);
+
+      return { rate: entry.rate, fetchedAt: entry.fetchedAt };
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      throw new ServiceUnavailableException(
+        `Failed to fetch ${pair} exchange rate`,
+      );
+    }
+  }
+
+  /**
    * Get historical data for a symbol
    */
   async getHistoricalData(
@@ -117,11 +264,15 @@ export class YahooFinanceService {
     period1: number,
     period2: number,
     interval: string = '1d',
-  ): Promise<any> {
-    try {
-      const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${interval}&includePrePost=true&events=div%7Csplit%7Cearn`;
+  ): Promise<YahooHistoricalResult> {
+    const safeInterval = this.assertValidInterval(interval);
 
-      const response = await fetch(url);
+    try {
+      const url = `${this.baseUrl}/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=${encodeURIComponent(safeInterval)}&includePrePost=true&events=div%7Csplit%7Cearn`;
+
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10_000),
+      });
 
       if (!response.ok) {
         throw new HttpException(
@@ -130,7 +281,8 @@ export class YahooFinanceService {
         );
       }
 
-      const data = await response.json();
+      const data =
+        (await response.json()) as YahooChartResponse<YahooHistoricalResult>;
 
       if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
         throw new HttpException('Symbol not found', HttpStatus.NOT_FOUND);

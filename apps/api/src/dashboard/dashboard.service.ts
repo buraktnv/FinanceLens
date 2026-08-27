@@ -1,9 +1,100 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  FxPair,
+  YahooFinanceService,
+} from '../yahoo-finance/yahoo-finance.service';
+
+interface PairRate {
+  rate: number;
+  fetchedAt: string | null;
+}
+
+type FxRates = Record<FxPair, PairRate>;
+
+const FX_PAIRS = [
+  'USDTRY',
+  'EURTRY',
+  'GBPTRY',
+  'CHFTRY',
+  'JPYTRY',
+  'AUDTRY',
+] as const satisfies readonly FxPair[];
+
+const CURRENCY_TO_PAIR: Partial<Record<string, FxPair>> = {
+  USD: 'USDTRY',
+  EUR: 'EURTRY',
+  GBP: 'GBPTRY',
+  CHF: 'CHFTRY',
+  JPY: 'JPYTRY',
+  AUD: 'AUDTRY',
+};
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private yahooFinance: YahooFinanceService,
+  ) {}
+
+  /**
+   * Fetch all supported FX pairs concurrently; on upstream failure fall back
+   * to rate=1 and flag the overview as stale instead of failing the request.
+   */
+  private async fetchFxRates(): Promise<{ rates: FxRates; stale: boolean }> {
+    const results = await Promise.all(
+      FX_PAIRS.map(async (pair): Promise<PairRate> => {
+        try {
+          const { rate, fetchedAt } = await this.yahooFinance.getFxRate(pair);
+          return { rate, fetchedAt };
+        } catch {
+          return { rate: 1, fetchedAt: null };
+        }
+      }),
+    );
+
+    const rates = Object.fromEntries(
+      FX_PAIRS.map((pair, i) => [pair, results[i]]),
+    ) as FxRates;
+
+    return {
+      rates,
+      stale: results.some((r) => r.fetchedAt === null),
+    };
+  }
+
+  private latestFetchedAt(rates: FxRates): string | null {
+    const timestamps = Object.values(rates)
+      .map((r) => r.fetchedAt)
+      .filter((t): t is string => t !== null)
+      .sort();
+    return timestamps.length > 0 ? timestamps[timestamps.length - 1] : null;
+  }
+
+  /**
+   * Per-item currency drives the TRY multiplier:
+   * USD/EUR/GBP/CHF/JPY/AUD -> x<pair>TRY, TRY -> x1.
+   * Any other currency counts at nominal and records a warning so the
+   * understatement is visible instead of silent.
+   */
+  private toTry(
+    value: number,
+    currency: string,
+    rates: FxRates,
+    warnings: string[],
+    assetLabel: string,
+  ): number {
+    if (currency === 'TRY') return value;
+
+    const pair = CURRENCY_TO_PAIR[currency];
+    if (!pair) {
+      warnings.push(
+        `Unsupported currency ${currency} held on asset ${assetLabel} counted at nominal`,
+      );
+      return value;
+    }
+    return value * rates[pair].rate;
+  }
 
   async getOverview(userId: string) {
     const [
@@ -16,6 +107,7 @@ export class DashboardService {
       incomes,
       expenses,
       loans,
+      fx,
     ] = await Promise.all([
       this.prisma.stock.findMany({ where: { userId } }),
       this.prisma.eTF.findMany({ where: { userId } }),
@@ -26,28 +118,66 @@ export class DashboardService {
       this.getMonthlyIncomes(userId),
       this.getMonthlyExpenses(userId),
       this.prisma.loan.findMany({ where: { userId, status: 'ACTIVE' } }),
+      this.fetchFxRates(),
     ]);
+    const { rates: fxRates, stale } = fx;
+    const warnings: string[] = [];
 
-    // Calculate stock values
+    // Calculate stock values (converted to TRY by row currency)
     const stocksValue = stocks.reduce(
-      (sum, s) => sum + Number(s.quantity) * Number(s.purchasePrice),
+      (sum, s) =>
+        sum +
+        this.toTry(
+          Number(s.quantity) * Number(s.purchasePrice),
+          s.currency as string,
+          fxRates,
+          warnings,
+          (s as { symbol?: string }).symbol ?? s.id,
+        ),
       0,
     );
 
-    // Calculate ETF values
+    // Calculate ETF values (converted to TRY by row currency)
     const etfsValue = etfs.reduce(
-      (sum, e) => sum + Number(e.quantity) * Number(e.purchasePrice),
+      (sum, e) =>
+        sum +
+        this.toTry(
+          Number(e.quantity) * Number(e.purchasePrice),
+          e.currency as string,
+          fxRates,
+          warnings,
+          (e as { symbol?: string }).symbol ?? e.id,
+        ),
       0,
     );
 
-    // Calculate Eurobond values (face value * quantity)
+    // Calculate Eurobond values (face value * quantity, converted to TRY)
     const eurobondsValue = eurobonds.reduce(
-      (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
+      (sum, e) =>
+        sum +
+        this.toTry(
+          Number(e.faceValue) * Number(e.quantity),
+          e.currency as string,
+          fxRates,
+          warnings,
+          (e as { name?: string }).name ?? e.id,
+        ),
       0,
     );
 
-    // Calculate cash total (sum all balances for now - no currency conversion yet)
-    const cashValue = cash.reduce((sum, c) => sum + Number(c.balance), 0);
+    // Calculate cash total, converted per-account currency to TRY.
+    const cashValue = cash.reduce(
+      (sum, c) =>
+        sum +
+        this.toTry(
+          Number(c.balance),
+          c.currency as string,
+          fxRates,
+          warnings,
+          (c as { name?: string }).name ?? c.id,
+        ),
+      0,
+    );
 
     // Calculate gold value (just purchase cost for now - current market price will be fetched on frontend)
     const goldValue = gold.reduce(
@@ -61,9 +191,9 @@ export class DashboardService {
       0,
     );
 
-    // Calculate loan balances
+    // Calculate loan balances ("??" not "||": a paid-off loan has 0 remaining)
     const totalDebt = loans.reduce(
-      (sum, l) => sum + Number(l.remainingBalance || l.principalAmount),
+      (sum, l) => sum + Number(l.remainingBalance ?? l.principalAmount ?? 0),
       0,
     );
 
@@ -102,6 +232,12 @@ export class DashboardService {
               ).toFixed(1)
             : 0,
       },
+      fxRates: {
+        ...Object.fromEntries(FX_PAIRS.map((p) => [p, fxRates[p].rate])),
+        fetchedAt: this.latestFetchedAt(fxRates),
+      },
+      warnings,
+      ...(stale ? { stale: true } : {}),
     };
   }
 

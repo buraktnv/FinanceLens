@@ -30,12 +30,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, BarChart3 } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, BarChart3, Wallet, TrendingUp, Layers } from "lucide-react";
 import { stocksApi, Stock, yahooFinanceApi } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddStockForm } from "@/components/forms/add-stock-form";
 import { EditStockForm } from "@/components/forms/edit-stock-form";
 import { StockChart } from "@/components/stock-chart";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
 import { toast } from "sonner";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StocksPage() {
   const queryClient = useQueryClient();
@@ -46,7 +56,12 @@ export default function StocksPage() {
   const [chartStock, setChartStock] = useState<Stock | null>(null);
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
 
-  const { data: stocks = [], isLoading: stocksLoading, error: stocksError } = useQuery({
+  const {
+    data: stocks = [],
+    isLoading: stocksLoading,
+    error: stocksError,
+    refetch: refetchStocks,
+  } = useQuery({
     queryKey: ["stocks"],
     queryFn: () => stocksApi.getAll(),
   });
@@ -67,6 +82,10 @@ export default function StocksPage() {
       toast.success("Stock deleted successfully");
       setDeletingStock(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingStock(null);
+    },
   });
 
   const filteredStocks = stocks.filter(
@@ -74,11 +93,6 @@ export default function StocksPage() {
       stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
       stock.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const formatCurrency = (value: number, currency = "USD", decimals = 2) => {
-    const symbol = currency === "USD" ? "$" : currency === "TRY" ? "₺" : "€";
-    return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-  };
 
   const handleDelete = () => {
     if (deletingStock) {
@@ -88,6 +102,8 @@ export default function StocksPage() {
 
   // Fetch current prices for all stocks
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPrices = async () => {
       if (stocks.length === 0) return;
 
@@ -102,33 +118,50 @@ export default function StocksPage() {
           }
         })
       );
-      setCurrentPrices(prices);
+      if (!cancelled) {
+        setCurrentPrices(prices);
+      }
     };
 
     fetchPrices();
     // Refresh prices every 5 minutes
     const interval = setInterval(fetchPrices, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [stocks]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+    // Prices are keyed by symbol; only re-create the fetch loop when holdings are added/removed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stocks.length]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-36 sm:h-9" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-40" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={6} />
       </div>
     );
   }
 
   if (stocksError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {stocksError instanceof Error ? stocksError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={
+          stocksError instanceof Error ? stocksError.message : undefined
+        }
+        onRetry={() => refetchStocks()}
+      />
     );
   }
 
@@ -138,43 +171,51 @@ export default function StocksPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Stocks</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage your stock portfolio</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Stock
-        </Button>
-      </div>
+      <PageHeader
+        title="Stocks"
+        description="Manage your stock portfolio"
+        actions={
+          <>
+            <ImageImportButton
+              targetType="stock"
+              targetLabel="Hisse Senedi"
+              fieldOrder={["symbol", "name", "quantity", "purchasePrice", "currency", "purchaseDate"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await stocksApi.create({
+                    symbol: String(row.symbol ?? ""),
+                    name: String(row.name ?? ""),
+                    quantity: Number(row.quantity ?? 0),
+                    purchasePrice: Number(row.purchasePrice ?? 0),
+                    currency: (row.currency as Stock["currency"]) || "USD",
+                    purchaseDate: row.purchaseDate
+                      ? String(row.purchaseDate)
+                      : new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["stocks"] });
+                queryClient.invalidateQueries({ queryKey: ["stocks", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New Stock
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalCost.toLocaleString("en-US")}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Dividends</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${totalDividends.toLocaleString("en-US")}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Stock Count</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{summary?.totalStocks ?? 0}</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Cost" value={formatCurrency(totalCost)} icon={Wallet} />
+        <StatCard
+          title="Total Dividends"
+          value={formatCurrency(totalDividends)}
+          icon={TrendingUp}
+          tone="success"
+        />
+        <StatCard title="Stock Count" value={summary?.totalStocks ?? 0} icon={Layers} />
       </div>
 
       {/* Search */}
@@ -183,6 +224,7 @@ export default function StocksPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search stocks..."
+            aria-label="Search stocks"
             className="pl-10 text-sm sm:text-base"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -226,19 +268,19 @@ export default function StocksPage() {
                     <TableRow key={stock.id}>
                       <TableCell className="font-medium">{stock.symbol}</TableCell>
                       <TableCell>{stock.name}</TableCell>
-                      <TableCell className="text-right">{quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(purchasePrice, stock.currency, 3)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">{quantity}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(purchasePrice, stock.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
                         {currentPrice ? (
                           formatCurrency(currentPrice, stock.currency)
                         ) : (
                           <Loader2 className="h-4 w-4 animate-spin inline" />
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">
                         {currentValue ? formatCurrency(currentValue, stock.currency) : "-"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">
                         {profitLoss !== null ? (
                           <div className={profitLoss >= 0 ? "text-green-600" : "text-red-600"}>
                             <div className="font-medium">
@@ -246,14 +288,14 @@ export default function StocksPage() {
                             </div>
                             {profitLossPercent !== null && (
                               <div className="text-xs">
-                                ({profitLoss >= 0 ? "+" : ""}{profitLossPercent.toFixed(2)}%)
+                                ({profitLoss >= 0 ? "+" : ""}{formatPercent(profitLossPercent)})
                               </div>
                             )}
                           </div>
                         ) : "-"}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
-                        {new Date(stock.purchaseDate).toLocaleDateString("en-US")}
+                      <TableCell className="text-right text-sm tabular-nums">
+                        {formatDate(stock.purchaseDate)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
@@ -262,6 +304,7 @@ export default function StocksPage() {
                             size="icon"
                             onClick={() => setChartStock(stock)}
                             title="Chart"
+                            aria-label="Show chart"
                             className="h-8 w-8"
                           >
                             <BarChart3 className="h-4 w-4" />
@@ -271,6 +314,7 @@ export default function StocksPage() {
                             size="icon"
                             onClick={() => setEditingStock(stock)}
                             title="Edit"
+                            aria-label="Edit stock"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -280,7 +324,8 @@ export default function StocksPage() {
                             size="icon"
                             onClick={() => setDeletingStock(stock)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                            aria-label="Delete stock"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -291,18 +336,18 @@ export default function StocksPage() {
                 })}
               </TableBody>
             </Table>
+          ) : searchTerm ? (
+            <EmptyState title="No stocks found matching your search" />
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">
-                {searchTerm ? "No stocks found matching your search" : "No stocks added yet"}
-              </p>
-              {!searchTerm && (
-                <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
+            <EmptyState
+              title="No stocks added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4" />
                   Add Your First Stock
                 </Button>
-              )}
-            </div>
+              }
+            />
           )}
         </CardContent>
       </Card>

@@ -30,11 +30,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, Wallet, Banknote } from "lucide-react";
 import { cashApi, Cash } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddCashForm } from "@/components/forms/add-cash-form";
 import { EditCashForm } from "@/components/forms/edit-cash-form";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CashPage() {
   const queryClient = useQueryClient();
@@ -43,7 +53,12 @@ export default function CashPage() {
   const [editingCash, setEditingCash] = useState<Cash | null>(null);
   const [deletingCash, setDeletingCash] = useState<Cash | null>(null);
 
-  const { data: cashAccounts = [], isLoading: cashLoading, error: cashError } = useQuery({
+  const {
+    data: cashAccounts = [],
+    isLoading: cashLoading,
+    error: cashError,
+    refetch: refetchCash,
+  } = useQuery({
     queryKey: ["cash"],
     queryFn: () => cashApi.getAll(),
   });
@@ -64,6 +79,10 @@ export default function CashPage() {
       toast.success("Cash account deleted successfully");
       setDeletingCash(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingCash(null);
+    },
   });
 
   const filteredCash = cashAccounts.filter(
@@ -71,11 +90,6 @@ export default function CashPage() {
       cash.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (cash.bankName && cash.bankName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  const formatCurrency = (value: number, currency = "USD") => {
-    const symbol = currency === "USD" ? "$" : currency === "TRY" ? "₺" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency;
-    return `${symbol}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   const handleDelete = () => {
     if (deletingCash) {
@@ -85,17 +99,30 @@ export default function CashPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-52 sm:h-9" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-44" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (cashError) {
     return (
-      <div className="text-center text-red-600 py-8">
-        Error: {cashError instanceof Error ? cashError.message : "Unknown error"}
-      </div>
+      <ErrorState
+        message={cashError instanceof Error ? cashError.message : undefined}
+        onRetry={() => refetchCash()}
+      />
     );
   }
 
@@ -106,35 +133,40 @@ export default function CashPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Cash Accounts</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">All your cash accounts</p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Account
-        </Button>
-      </div>
+      <PageHeader
+        title="Cash Accounts"
+        description="All your cash accounts"
+        actions={
+          <>
+            <ImageImportButton
+              targetType="cash"
+              targetLabel="Nakit Hesap"
+              fieldOrder={["name", "balance", "currency"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await cashApi.create({
+                    accountName: String(row.name ?? ""),
+                    balance: Number(row.balance ?? 0),
+                    currency: (row.currency as Cash["currency"]) || "TRY",
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["cash"] });
+                queryClient.invalidateQueries({ queryKey: ["cash", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Account
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Accounts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{totalAccounts}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Balance (USD)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalBalance.toLocaleString("en-US")}</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Accounts" value={totalAccounts} icon={Wallet} />
+        <StatCard title="Total Balance" value={formatCurrency(totalBalance)} icon={Banknote} />
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Currencies</CardTitle>
@@ -142,7 +174,7 @@ export default function CashPage() {
           <CardContent>
             <div className="space-y-1 text-sm">
               {Object.entries(byCurrency).map(([currency, amount]) => (
-                <div key={currency} className="flex justify-between">
+                <div key={currency} className="flex justify-between tabular-nums">
                   <span className="font-medium">{currency}:</span>
                   <span>{formatCurrency(amount, currency)}</span>
                 </div>
@@ -173,9 +205,7 @@ export default function CashPage() {
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {filteredCash.length === 0 ? (
-            <div className="text-center py-8 text-sm sm:text-base text-muted-foreground">
-              No cash accounts added yet.
-            </div>
+            <EmptyState title="No cash accounts added yet." />
           ) : (
             <Table>
               <TableHeader>
@@ -193,7 +223,7 @@ export default function CashPage() {
                   <TableRow key={cash.id}>
                     <TableCell className="font-medium">{cash.accountName}</TableCell>
                     <TableCell>{cash.bankName || "-"}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(cash.balance, cash.currency)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatCurrency(cash.balance, cash.currency)}</TableCell>
                     <TableCell>{cash.currency}</TableCell>
                     <TableCell className="text-sm">{cash.accountType || "-"}</TableCell>
                     <TableCell className="text-right">
@@ -203,6 +233,7 @@ export default function CashPage() {
                           size="icon"
                           onClick={() => setEditingCash(cash)}
                           title="Edit"
+                          aria-label="Edit cash account"
                           className="h-8 w-8"
                         >
                           <Pencil className="h-4 w-4" />
@@ -212,7 +243,8 @@ export default function CashPage() {
                           size="icon"
                           onClick={() => setDeletingCash(cash)}
                           title="Delete"
-                          className="text-red-600 hover:text-red-700 h-8 w-8"
+                          aria-label="Delete cash account"
+                          className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

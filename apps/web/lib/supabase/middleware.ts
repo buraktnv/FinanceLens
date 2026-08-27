@@ -42,20 +42,25 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Demo modu: tarayıcıda localStorage'a yazılan kullanıcıya karşılık bu
+  // çerez Edge tarafında okunur; Supabase oturumu olmasa da korumalı
+  // yollara girişe izin verir.
+  const isDemo = request.cookies.get('financelens-demo')?.value === '1';
+
   // Protected routes - redirect to login if not authenticated
   const protectedPaths = ['/dashboard', '/status'];
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
 
-  if (isProtectedPath && !user) {
+  if (isProtectedPath && !user && !isDemo) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('redirect', request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // Demo kullanicisini auth sayfalarinda tutmayalim.
   const authPaths = ['/login', '/register'];
   const isAuthPath = authPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)

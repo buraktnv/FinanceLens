@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSilverDto, UpdateSilverDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -36,17 +36,8 @@ export class SilverService {
   }
 
   async update(userId: string, id: string, updateSilverDto: UpdateSilverDto) {
-    // First verify ownership
-    const silver = await this.prisma.silver.findFirst({
+    const updated = await this.prisma.silver.updateMany({
       where: { id, userId },
-    });
-
-    if (!silver) {
-      return null;
-    }
-
-    return this.prisma.silver.update({
-      where: { id },
       data: {
         ...(updateSilverDto.name && { name: updateSilverDto.name }),
         ...(updateSilverDto.quantity !== undefined && {
@@ -69,21 +60,21 @@ export class SilverService {
         }),
       },
     });
+    if (updated.count === 0)
+      throw new NotFoundException('Silver holding not found');
+
+    const silver = await this.prisma.silver.findUnique({ where: { id } });
+    if (!silver) throw new NotFoundException('Silver holding not found');
+
+    return silver;
   }
 
-  async remove(userId: string, id: string) {
-    // First verify ownership
-    const silver = await this.prisma.silver.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.silver.deleteMany({
       where: { id, userId },
     });
-
-    if (!silver) {
-      return null;
-    }
-
-    return this.prisma.silver.delete({
-      where: { id },
-    });
+    if (result.count === 0)
+      throw new NotFoundException('Silver holding not found');
   }
 
   // Get silver summary

@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EtfsService } from './etfs.service';
@@ -35,27 +36,30 @@ export class EtfsController {
   }
 
   @Get(':id')
-  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async findOne(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const etf = await this.etfsService.findOne(userId, id);
     if (!etf) throw new NotFoundException('ETF not found');
     return etf;
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEtfDto,
   ) {
-    const etf = await this.etfsService.update(userId, id, dto);
-    if (!etf) throw new NotFoundException('ETF not found');
-    return etf;
+    return this.etfsService.update(userId, id, dto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const etf = await this.etfsService.remove(userId, id);
-    if (!etf) throw new NotFoundException('ETF not found');
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    await this.etfsService.remove(userId, id);
     return { message: 'ETF deleted successfully' };
   }
 }

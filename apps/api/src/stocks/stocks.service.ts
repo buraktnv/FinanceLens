@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStockDto, UpdateStockDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -50,17 +50,8 @@ export class StocksService {
   }
 
   async update(userId: string, id: string, updateStockDto: UpdateStockDto) {
-    // First verify ownership
-    const stock = await this.prisma.stock.findFirst({
+    const updated = await this.prisma.stock.updateMany({
       where: { id, userId },
-    });
-
-    if (!stock) {
-      return null;
-    }
-
-    return this.prisma.stock.update({
-      where: { id },
       data: {
         ...(updateStockDto.symbol && { symbol: updateStockDto.symbol }),
         ...(updateStockDto.name && { name: updateStockDto.name }),
@@ -81,25 +72,23 @@ export class StocksService {
           notes: updateStockDto.notes,
         }),
       },
-      include: {
-        dividends: true,
-      },
     });
+    if (updated.count === 0) throw new NotFoundException('Stock not found');
+
+    const stock = await this.prisma.stock.findUnique({
+      where: { id },
+      include: { dividends: true },
+    });
+    if (!stock) throw new NotFoundException('Stock not found');
+
+    return stock;
   }
 
-  async remove(userId: string, id: string) {
-    // First verify ownership
-    const stock = await this.prisma.stock.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.stock.deleteMany({
       where: { id, userId },
     });
-
-    if (!stock) {
-      return null;
-    }
-
-    return this.prisma.stock.delete({
-      where: { id },
-    });
+    if (result.count === 0) throw new NotFoundException('Stock not found');
   }
 
   // Get portfolio summary
@@ -117,7 +106,11 @@ export class StocksService {
 
     const totalDividends = stocks.reduce((sum, stock) => {
       return (
-        sum + stock.dividends.reduce((dSum, d) => dSum + Number(d.amount), 0)
+        sum +
+        stock.dividends.reduce(
+          (dSum, d) => dSum + Number(d.amount) - Number(d.taxWithheld ?? 0),
+          0,
+        )
       );
     }, 0);
 

@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EurobondsService } from './eurobonds.service';
@@ -35,27 +36,30 @@ export class EurobondsController {
   }
 
   @Get(':id')
-  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
+  async findOne(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     const eurobond = await this.eurobondsService.findOne(userId, id);
     if (!eurobond) throw new NotFoundException('Eurobond not found');
     return eurobond;
   }
 
   @Patch(':id')
-  async update(
+  update(
     @CurrentUser('id') userId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEurobondDto,
   ) {
-    const eurobond = await this.eurobondsService.update(userId, id, dto);
-    if (!eurobond) throw new NotFoundException('Eurobond not found');
-    return eurobond;
+    return this.eurobondsService.update(userId, id, dto);
   }
 
   @Delete(':id')
-  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const eurobond = await this.eurobondsService.remove(userId, id);
-    if (!eurobond) throw new NotFoundException('Eurobond not found');
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    await this.eurobondsService.remove(userId, id);
     return { message: 'Eurobond deleted successfully' };
   }
 }

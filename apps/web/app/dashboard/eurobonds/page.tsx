@@ -31,17 +31,32 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Calendar, Loader2, Pencil, Trash2, Wallet, Banknote, TrendingUp, Percent } from "lucide-react";
 import { eurobondsApi, Eurobond } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddEurobondForm } from "@/components/forms/add-eurobond-form";
 import { EditEurobondForm } from "@/components/forms/edit-eurobond-form";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EurobondsPage() {
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEurobond, setEditingEurobond] = useState<Eurobond | null>(null);
   const [deletingEurobond, setDeletingEurobond] = useState<Eurobond | null>(null);
-  const { data: eurobonds = [], isLoading: bondsLoading, error: bondsError } = useQuery({
+  const {
+    data: eurobonds = [],
+    isLoading: bondsLoading,
+    error: bondsError,
+    refetch: refetchBonds,
+  } = useQuery({
     queryKey: ["eurobonds"],
     queryFn: () => eurobondsApi.getAll(),
   });
@@ -62,6 +77,10 @@ export default function EurobondsPage() {
       toast.success("Eurobond deleted successfully");
       setDeletingEurobond(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingEurobond(null);
+    },
   });
 
   const handleDelete = () => {
@@ -72,78 +91,91 @@ export default function EurobondsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32 sm:h-9" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-44" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (bondsError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {bondsError instanceof Error ? bondsError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={bondsError instanceof Error ? bondsError.message : undefined}
+        onRetry={() => refetchBonds()}
+      />
     );
   }
 
   const totalFaceValue = summary?.totalFaceValue ?? 0;
   const totalCurrentValue = summary?.totalCurrentValue ?? 0;
   const annualCouponIncome = summary?.annualCouponIncome ?? 0;
-  const avgYield = totalFaceValue > 0 ? ((annualCouponIncome / totalFaceValue) * 100).toFixed(2) : "0";
+  const avgYield = totalFaceValue > 0 ? (annualCouponIncome / totalFaceValue) * 100 : 0;
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Eurobonds</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage your eurobond portfolio</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Eurobond
-        </Button>
-      </div>
+      <PageHeader
+        title="Eurobonds"
+        description="Manage your eurobond portfolio"
+        actions={
+          <>
+            <ImageImportButton
+              targetType="eurobond"
+              targetLabel="Eurobond"
+              fieldOrder={["name", "faceValue", "quantity", "couponRate", "currency", "maturityDate"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await eurobondsApi.create({
+                    name: String(row.name ?? ""),
+                    faceValue: Number(row.faceValue ?? 0),
+                    quantity: Number(row.quantity ?? 1),
+                    purchasePrice: Number(row.faceValue ?? 0),
+                    couponRate: Number(row.couponRate ?? 0),
+                    currency: (row.currency as Eurobond["currency"]) || "USD",
+                    purchaseDate: new Date().toISOString().slice(0, 10),
+                    maturityDate: row.maturityDate
+                      ? String(row.maturityDate)
+                      : new Date(Date.now() + 5 * 365.25 * 86400000)
+                          .toISOString()
+                          .slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["eurobonds"] });
+                queryClient.invalidateQueries({ queryKey: ["eurobonds", "summary"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4" />
+              Add New Eurobond
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Face Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalFaceValue.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalCurrentValue.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Annual Coupon Income</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-600">${annualCouponIncome.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Average Yield</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">%{avgYield}</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Face Value" value={formatCurrency(totalFaceValue)} icon={Wallet} />
+        <StatCard title="Current Value" value={formatCurrency(totalCurrentValue)} icon={Banknote} />
+        <StatCard
+          title="Annual Coupon Income"
+          value={formatCurrency(annualCouponIncome)}
+          icon={TrendingUp}
+          tone="success"
+        />
+        <StatCard title="Average Yield" value={formatPercent(avgYield)} icon={Percent} />
       </div>
 
       {/* Eurobonds Table */}
@@ -172,7 +204,8 @@ export default function EurobondsPage() {
                   const faceValue = Number(bond.faceValue);
                   const purchasePrice = Number(bond.purchasePrice);
                   const couponRate = Number(bond.couponRate) * 100;
-                  const annualIncome = faceValue * Number(bond.couponRate);
+                  const annualIncome =
+                    faceValue * Number(bond.quantity) * Number(bond.couponRate);
                   const maturityDate = new Date(bond.maturityDate);
                   const yearsToMaturity = ((maturityDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
 
@@ -180,19 +213,21 @@ export default function EurobondsPage() {
                     <TableRow key={bond.id}>
                       <TableCell className="font-medium">{bond.name}</TableCell>
                       <TableCell className="text-muted-foreground text-sm">{bond.isin || "-"}</TableCell>
-                      <TableCell className="text-right">${faceValue.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{purchasePrice.toFixed(2)}%</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(faceValue, bond.currency)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(purchasePrice, bond.currency)}</TableCell>
                       <TableCell className="text-right">
-                        <Badge variant="secondary">%{couponRate.toFixed(2)}</Badge>
+                        <Badge variant="secondary" className="tabular-nums">{formatPercent(couponRate)}</Badge>
                       </TableCell>
                       <TableCell className="text-right text-sm">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 tabular-nums">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                          <span>{maturityDate.toLocaleDateString("en-US")}</span>
+                          <span>{formatDate(bond.maturityDate)}</span>
                           <span className="text-muted-foreground text-xs">({yearsToMaturity} yrs)</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right text-sm text-green-600">${annualIncome.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-sm text-green-600 tabular-nums">
+                        {formatCurrency(annualIncome, bond.currency)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
                           <Button
@@ -200,6 +235,7 @@ export default function EurobondsPage() {
                             size="icon"
                             onClick={() => setEditingEurobond(bond)}
                             title="Edit"
+                            aria-label="Edit eurobond"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -209,7 +245,8 @@ export default function EurobondsPage() {
                             size="icon"
                             onClick={() => setDeletingEurobond(bond)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                            aria-label="Delete eurobond"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -221,13 +258,15 @@ export default function EurobondsPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">No eurobonds added yet</p>
-              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4" />
-                Add Your First Eurobond
-              </Button>
-            </div>
+            <EmptyState
+              title="No eurobonds added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Your First Eurobond
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>
@@ -309,8 +348,8 @@ export default function EurobondsPage() {
                   <CouponItem
                     key={payment.id}
                     bond={bond.name}
-                    date={new Date(payment.paymentDate).toLocaleDateString("en-US")}
-                    amount={`$${Number(payment.amount).toLocaleString()}`}
+                    date={formatDate(payment.paymentDate)}
+                    amount={formatCurrency(Number(payment.amount), payment.currency)}
                   />
                 ))
               ).slice(0, 5)}
@@ -326,12 +365,12 @@ export default function EurobondsPage() {
 
 function CouponItem({ bond, date, amount }: { bond: string; date: string; amount: string }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
       <div>
         <p className="font-medium">{bond}</p>
         <p className="text-sm text-muted-foreground">{date}</p>
       </div>
-      <span className="font-medium text-green-600">{amount}</span>
+      <span className="font-medium text-green-600 tabular-nums">{amount}</span>
     </div>
   );
 }

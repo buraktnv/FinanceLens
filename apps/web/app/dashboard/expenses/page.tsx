@@ -30,46 +30,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Repeat, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Repeat, Loader2, Pencil, Trash2, TrendingDown, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { expensesApi, Expense } from "@/lib/api";
 import { AddExpenseForm } from "@/components/forms/add-expense-form";
 import { EditExpenseForm } from "@/components/forms/edit-expense-form";
-
-const expenseCategories: Record<string, { label: string; color: string }> = {
-  RENT: { label: "Rent", color: "bg-red-100 text-red-800" },
-  MORTGAGE_PAYMENT: { label: "Mortgage", color: "bg-red-100 text-red-800" },
-  UTILITIES: { label: "Utilities", color: "bg-orange-100 text-orange-800" },
-  INTERNET: { label: "Internet", color: "bg-orange-100 text-orange-800" },
-  PHONE: { label: "Phone", color: "bg-orange-100 text-orange-800" },
-  MAINTENANCE: { label: "Maintenance", color: "bg-orange-100 text-orange-800" },
-  INSURANCE: { label: "Insurance", color: "bg-orange-100 text-orange-800" },
-  HOA_FEE: { label: "HOA Fee", color: "bg-orange-100 text-orange-800" },
-  PROPERTY_TAX: { label: "Property Tax", color: "bg-orange-100 text-orange-800" },
-  GROCERIES: { label: "Groceries", color: "bg-green-100 text-green-800" },
-  TRANSPORTATION: { label: "Transportation", color: "bg-blue-100 text-blue-800" },
-  FUEL: { label: "Fuel", color: "bg-blue-100 text-blue-800" },
-  CAR_PAYMENT: { label: "Car Payment", color: "bg-blue-100 text-blue-800" },
-  CAR_INSURANCE: { label: "Car Insurance", color: "bg-blue-100 text-blue-800" },
-  CAR_MAINTENANCE: { label: "Car Maintenance", color: "bg-blue-100 text-blue-800" },
-  PARKING: { label: "Parking", color: "bg-blue-100 text-blue-800" },
-  DINING: { label: "Dining", color: "bg-yellow-100 text-yellow-800" },
-  COFFEE: { label: "Coffee", color: "bg-yellow-100 text-yellow-800" },
-  ENTERTAINMENT: { label: "Entertainment", color: "bg-purple-100 text-purple-800" },
-  HEALTHCARE: { label: "Healthcare", color: "bg-pink-100 text-pink-800" },
-  EDUCATION: { label: "Education", color: "bg-indigo-100 text-indigo-800" },
-  SHOPPING: { label: "Shopping", color: "bg-indigo-100 text-indigo-800" },
-  CLOTHING: { label: "Clothing", color: "bg-indigo-100 text-indigo-800" },
-  PERSONAL_CARE: { label: "Personal Care", color: "bg-pink-100 text-pink-800" },
-  GYM: { label: "Gym", color: "bg-lime-100 text-lime-800" },
-  SUBSCRIPTIONS: { label: "Subscriptions", color: "bg-cyan-100 text-cyan-800" },
-  TRAVEL: { label: "Travel", color: "bg-teal-100 text-teal-800" },
-  GIFTS: { label: "Gifts", color: "bg-rose-100 text-rose-800" },
-  DONATIONS: { label: "Donations", color: "bg-rose-100 text-rose-800" },
-  TAXES: { label: "Taxes", color: "bg-slate-100 text-slate-800" },
-  FEES: { label: "Fees", color: "bg-slate-100 text-slate-800" },
-  OTHER: { label: "Other", color: "bg-gray-100 text-gray-800" },
-};
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
+import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
+import { expenseCategories } from "@/lib/labels";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const paymentMethodLabels: Record<string, string> = {
   CASH: "Cash",
@@ -96,14 +71,22 @@ export default function ExpensesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
-  const { data: expenses = [], isLoading: expensesLoading, error: expensesError } = useQuery({
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // API expects 1-based month
+  const currentYear = now.getFullYear();
+  const {
+    data: expenses = [],
+    isLoading: expensesLoading,
+    error: expensesError,
+    refetch: refetchExpenses,
+  } = useQuery({
     queryKey: ["expenses"],
     queryFn: () => expensesApi.getAll(),
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["expenses", "summary"],
-    queryFn: () => expensesApi.getSummary(),
+    queryKey: ["expenses", "summary", currentYear, currentMonth],
+    queryFn: () => expensesApi.getSummary(currentMonth, currentYear),
   });
 
   const isLoading = expensesLoading || summaryLoading;
@@ -117,6 +100,10 @@ export default function ExpensesPage() {
       toast.success("Expense deleted successfully");
       setDeletingExpense(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingExpense(null);
+    },
   });
 
   const handleDelete = () => {
@@ -127,22 +114,32 @@ export default function ExpensesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-36 sm:h-9" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-44" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (expensesError) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500">
-          {expensesError instanceof Error ? expensesError.message : "Error loading data"}
-        </p>
-        <Button onClick={() => window.location.reload()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        message={
+          expensesError instanceof Error ? expensesError.message : undefined
+        }
+        onRetry={() => refetchExpenses()}
+      />
     );
   }
 
@@ -154,45 +151,37 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Expenses</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Track your spending</p>
-        </div>
-        <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4" />
-          Add New Expense
-        </Button>
-      </div>
+      <PageHeader
+        title="Expenses"
+        description="Track your spending"
+        actions={
+          <Button className="gap-2 w-full sm:w-auto" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" />
+            Add New Expense
+          </Button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">This Month Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-red-600">${totalThisMonth.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Fixed Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">${totalRecurring.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Monthly recurring</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Transaction Count</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{expenseCount}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="This Month Total"
+          value={formatCurrency(totalThisMonth)}
+          icon={TrendingDown}
+          tone="danger"
+        />
+        <StatCard
+          title="Fixed Expenses"
+          value={formatCurrency(totalRecurring)}
+          hint="Monthly recurring"
+          icon={Repeat}
+        />
+        <StatCard
+          title="Transaction Count"
+          value={expenseCount}
+          hint="This month"
+          icon={Layers}
+        />
       </div>
 
       {/* Expense Distribution */}
@@ -208,20 +197,20 @@ export default function ExpensesPage() {
                 .sort(([, a], [, b]) => b - a)
                 .map(([category, amount]) => {
                   const categoryInfo = expenseCategories[category] ?? expenseCategories.OTHER!;
-                  const percentage = totalThisMonth > 0 ? ((amount / totalThisMonth) * 100).toFixed(1) : "0";
+                  const pct = totalThisMonth > 0 ? (amount / totalThisMonth) * 100 : 0;
                   return (
                     <div key={category} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
-                          <span className="text-sm text-muted-foreground">{percentage}%</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
+                            <span className="text-sm text-muted-foreground tabular-nums">{formatPercent(pct)}</span>
+                          </div>
+                          <span className="font-medium text-sm sm:text-base tabular-nums">{formatCurrency(amount)}</span>
                         </div>
-                        <span className="font-medium text-sm sm:text-base">${Number(amount).toLocaleString()}</span>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full"
-                          style={{ width: `${percentage}%` }}
+                          style={{ width: `${pct}%` }}
                         />
                       </div>
                     </div>
@@ -229,7 +218,7 @@ export default function ExpensesPage() {
                 })}
             </div>
           ) : (
-            <p className="text-sm sm:text-base text-muted-foreground text-center py-4">No expense data yet</p>
+            <EmptyState title="No expense data yet" />
           )}
         </CardContent>
       </Card>
@@ -264,10 +253,10 @@ export default function ExpensesPage() {
                         <Badge className={categoryInfo!.color}>{categoryInfo!.label}</Badge>
                       </TableCell>
                       <TableCell className="text-sm">{expense.description || "-"}</TableCell>
-                      <TableCell className="text-right font-medium text-sm text-red-600">
-                        -${amount.toLocaleString()}
+                      <TableCell className="text-right font-medium text-sm text-red-600 tabular-nums">
+                        -{formatCurrency(amount, expense.currency)}
                       </TableCell>
-                      <TableCell className="text-sm">{new Date(expense.date).toLocaleDateString("en-US")}</TableCell>
+                      <TableCell className="text-sm">{formatDate(expense.date)}</TableCell>
                       <TableCell>
                         {expense.paymentMethod ? (
                           <Badge variant="outline">
@@ -294,6 +283,7 @@ export default function ExpensesPage() {
                             size="icon"
                             onClick={() => setEditingExpense(expense)}
                             title="Edit"
+                            aria-label="Edit expense"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -303,7 +293,8 @@ export default function ExpensesPage() {
                             size="icon"
                             onClick={() => setDeletingExpense(expense)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 h-8 w-8"
+                            aria-label="Delete expense"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -315,13 +306,15 @@ export default function ExpensesPage() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-sm sm:text-base text-muted-foreground">No expenses added yet</p>
-              <Button className="mt-4 gap-2" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4" />
-                Add Your First Expense
-              </Button>
-            </div>
+            <EmptyState
+              title="No expenses added yet"
+              action={
+                <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add Your First Expense
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>

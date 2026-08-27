@@ -166,6 +166,17 @@ export interface DashboardOverview {
     savings: number;
     savingsRate: number | string;
   };
+  fxRates?: {
+    USDTRY: number;
+    EURTRY: number;
+    GBPTRY: number;
+    CHFTRY: number;
+    JPYTRY: number;
+    AUDTRY: number;
+    fetchedAt: string | null;
+  };
+  warnings?: string[];
+  stale?: boolean;
 }
 
 export interface Transaction {

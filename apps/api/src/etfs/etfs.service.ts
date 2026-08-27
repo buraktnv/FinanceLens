@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEtfDto, UpdateEtfDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -53,11 +53,8 @@ export class EtfsService {
   }
 
   async update(userId: string, id: string, dto: UpdateEtfDto) {
-    const etf = await this.prisma.eTF.findFirst({ where: { id, userId } });
-    if (!etf) return null;
-
-    return this.prisma.eTF.update({
-      where: { id },
+    const updated = await this.prisma.eTF.updateMany({
+      where: { id, userId },
       data: {
         ...(dto.symbol && { symbol: dto.symbol }),
         ...(dto.name && { name: dto.name }),
@@ -77,16 +74,23 @@ export class EtfsService {
         ...(dto.broker !== undefined && { broker: dto.broker }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
-      include: {
-        distributions: true,
-      },
     });
+    if (updated.count === 0) throw new NotFoundException('ETF not found');
+
+    const etf = await this.prisma.eTF.findUnique({
+      where: { id },
+      include: { distributions: true },
+    });
+    if (!etf) throw new NotFoundException('ETF not found');
+
+    return etf;
   }
 
-  async remove(userId: string, id: string) {
-    const etf = await this.prisma.eTF.findFirst({ where: { id, userId } });
-    if (!etf) return null;
-    return this.prisma.eTF.delete({ where: { id } });
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.eTF.deleteMany({
+      where: { id, userId },
+    });
+    if (result.count === 0) throw new NotFoundException('ETF not found');
   }
 
   async getPortfolioSummary(userId: string) {

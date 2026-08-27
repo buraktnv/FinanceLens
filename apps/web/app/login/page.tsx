@@ -22,6 +22,11 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const messageParam = searchParams.get("message");
+  const infoMessage =
+    messageParam === "confirm-email"
+      ? "Please check your inbox and confirm your email address before signing in."
+      : messageParam;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +69,11 @@ function LoginForm() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {infoMessage && (
+                <Alert>
+                  <AlertDescription>{infoMessage}</AlertDescription>
+                </Alert>
+              )}
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>

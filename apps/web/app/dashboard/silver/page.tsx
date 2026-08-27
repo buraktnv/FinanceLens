@@ -30,11 +30,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Search, Loader2, Pencil, Trash2, TrendingUp, TrendingDown, Scale, Wallet, Banknote } from "lucide-react";
 import { silverApi, preciousMetalsApi, Silver } from "@/lib/api";
+import { ImageImportButton } from "@/components/import/image-import-dialog";
 import { AddSilverForm } from "@/components/forms/add-silver-form";
 import { EditSilverForm } from "@/components/forms/edit-silver-form";
+import {
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  StatCard,
+  TableSkeleton,
+} from "@/components/shared";
 import { toast } from "sonner";
+import { formatCurrency, formatPercent } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SilverPage() {
   const queryClient = useQueryClient();
@@ -45,7 +55,12 @@ export default function SilverPage() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const { data: holdings = [], isLoading: holdingsLoading, error: holdingsError } = useQuery({
+  const {
+    data: holdings = [],
+    isLoading: holdingsLoading,
+    error: holdingsError,
+    refetch: refetchHoldings,
+  } = useQuery({
     queryKey: ["silver"],
     queryFn: () => silverApi.getAll(),
   });
@@ -66,15 +81,23 @@ export default function SilverPage() {
       toast.success("Silver holding deleted successfully");
       setDeletingSilver(null);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setDeletingSilver(null);
+    },
   });
 
   // Fetch current silver price every 15 minutes
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPrice = async () => {
       try {
         const priceData = await preciousMetalsApi.getSilverPrice();
-        setCurrentPrice(priceData.pricePerGram);
-        setLastUpdated(new Date());
+        if (!cancelled) {
+          setCurrentPrice(priceData.pricePerGram);
+          setLastUpdated(new Date());
+        }
       } catch {
         // Price fetch failed — keep last known price
       }
@@ -83,16 +106,15 @@ export default function SilverPage() {
     fetchPrice();
     const interval = setInterval(fetchPrice, 15 * 60 * 1000); // 15 minutes
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   const filteredHoldings = holdings.filter((silver) =>
     silver.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const formatCurrency = (value: number, decimals = 2) => {
-    return `$${value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-  };
 
   const handleDelete = () => {
     if (deletingSilver) {
@@ -102,17 +124,32 @@ export default function SilverPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-52 sm:h-9" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-9 w-full sm:w-44" />
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-28" />
+          ))}
+        </div>
+        <TableSkeleton rows={5} />
       </div>
     );
   }
 
   if (holdingsError) {
     return (
-      <div className="text-center text-red-600 py-8">
-        Error: {holdingsError instanceof Error ? holdingsError.message : "Unknown error"}
-      </div>
+      <ErrorState
+        message={
+          holdingsError instanceof Error ? holdingsError.message : undefined
+        }
+        onRetry={() => refetchHoldings()}
+      />
     );
   }
 
@@ -125,67 +162,59 @@ export default function SilverPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Silver Portfolio</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">All your silver assets</p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          Add New Silver
-        </Button>
-      </div>
+      <PageHeader
+        title="Silver Portfolio"
+        description="All your silver assets"
+        actions={
+          <>
+            <ImageImportButton
+              targetType="silver"
+              targetLabel="Gümüş"
+              fieldOrder={["name", "quantity", "purchasePrice", "currency"]}
+              onCommit={async (rows) => {
+                for (const row of rows) {
+                  await silverApi.create({
+                    name: String(row.name ?? ""),
+                    quantity: Number(row.quantity ?? 0),
+                    purchasePrice: Number(row.purchasePrice ?? 0),
+                    purchaseDate: new Date().toISOString().slice(0, 10),
+                  });
+                }
+                queryClient.invalidateQueries({ queryKey: ["silver"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+              }}
+            />
+            <Button onClick={() => setShowAddDialog(true)} className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Silver
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Grams</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{totalQuantity.toFixed(3)} g</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalCost)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Current Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(currentValue)}</div>
-            {currentPrice && (
-              <p className="text-xs text-muted-foreground mt-1">
-                ${currentPrice.toFixed(3)}/gram
-                {lastUpdated && (
-                  <span className="ml-2">
-                    (Updated: {lastUpdated.toLocaleTimeString("en-US")})
-                  </span>
-                )}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Profit/Loss</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-xl sm:text-2xl font-bold flex items-center ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profitLoss >= 0 ? <TrendingUp className="mr-1 h-5 w-5" /> : <TrendingDown className="mr-1 h-5 w-5" />}
-              {formatCurrency(Math.abs(profitLoss))}
-            </div>
-            <p className={`text-sm ${profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profitLoss >= 0 ? '+' : '-'}{Math.abs(profitLossPercent).toFixed(2)}%
-            </p>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Grams" value={`${totalQuantity.toFixed(3)} g`} icon={Scale} />
+        <StatCard title="Total Cost" value={formatCurrency(totalCost, "TRY")} icon={Wallet} />
+        <StatCard
+          title="Current Value"
+          value={formatCurrency(currentValue, "TRY")}
+          hint={
+            currentPrice
+              ? `${formatCurrency(currentPrice, "TRY")}/gram${
+                  lastUpdated ? ` (Updated: ${lastUpdated.toLocaleTimeString("en-US")})` : ""
+                }`
+              : undefined
+          }
+          icon={Banknote}
+        />
+        <StatCard
+          title="Profit/Loss"
+          value={formatCurrency(Math.abs(profitLoss), "TRY")}
+          hint={`${profitLoss >= 0 ? "+" : "-"}${formatPercent(Math.abs(profitLossPercent))}`}
+          icon={profitLoss >= 0 ? TrendingUp : TrendingDown}
+          tone={profitLoss >= 0 ? "success" : "danger"}
+        />
       </div>
 
       {/* Search */}
@@ -209,9 +238,7 @@ export default function SilverPage() {
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {filteredHoldings.length === 0 ? (
-            <div className="text-center py-8 text-sm sm:text-base text-muted-foreground">
-              No silver added yet.
-            </div>
+            <EmptyState title="No silver added yet." />
           ) : (
             <Table>
               <TableHeader>
@@ -238,16 +265,16 @@ export default function SilverPage() {
                   return (
                     <TableRow key={silver.id}>
                       <TableCell className="font-medium">{silver.name}</TableCell>
-                      <TableCell className="text-right">{quantity.toFixed(3)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(purchasePrice, 3)}</TableCell>
-                      <TableCell className="text-right">
-                        {currentPrice ? formatCurrency(currentPrice, 3) : "-"}
+                      <TableCell className="text-right tabular-nums">{quantity.toFixed(3)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatCurrency(purchasePrice, "TRY")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {currentPrice ? formatCurrency(currentPrice, "TRY") : "-"}
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(current)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right tabular-nums">{formatCurrency(current, "TRY")}</TableCell>
+                      <TableCell className="text-right tabular-nums">
                         {currentPrice ? (
                           <span className={profit >= 0 ? "text-green-600" : "text-red-600"}>
-                            {formatCurrency(profit)} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%)
+                            {formatCurrency(profit, "TRY")} ({profitPercent >= 0 ? '+' : ''}{formatPercent(profitPercent)})
                           </span>
                         ) : (
                           "-"
@@ -261,6 +288,7 @@ export default function SilverPage() {
                             size="icon"
                             onClick={() => setEditingSilver(silver)}
                             title="Edit"
+                            aria-label="Edit silver holding"
                             className="h-8 w-8"
                           >
                             <Pencil className="h-4 w-4" />
@@ -270,7 +298,8 @@ export default function SilverPage() {
                             size="icon"
                             onClick={() => setDeletingSilver(silver)}
                             title="Delete"
-                            className="text-red-600 hover:text-red-700 h-8 w-8"
+                            aria-label="Delete silver holding"
+                            className="text-red-600 hover:text-red-700 hover:bg-destructive/10 h-8 w-8"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

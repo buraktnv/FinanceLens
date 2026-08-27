@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEurobondDto, UpdateEurobondDto } from './dto';
 import { Prisma } from '@prisma/client';
@@ -54,14 +54,8 @@ export class EurobondsService {
   }
 
   async update(userId: string, id: string, dto: UpdateEurobondDto) {
-    const eurobond = await this.prisma.eurobond.findFirst({
+    const updated = await this.prisma.eurobond.updateMany({
       where: { id, userId },
-    });
-
-    if (!eurobond) return null;
-
-    return this.prisma.eurobond.update({
-      where: { id },
       data: {
         ...(dto.name && { name: dto.name }),
         ...(dto.isin !== undefined && { isin: dto.isin }),
@@ -86,20 +80,23 @@ export class EurobondsService {
         ...(dto.broker !== undefined && { broker: dto.broker }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
       },
-      include: {
-        couponPayments: true,
-      },
     });
+    if (updated.count === 0) throw new NotFoundException('Eurobond not found');
+
+    const eurobond = await this.prisma.eurobond.findUnique({
+      where: { id },
+      include: { couponPayments: true },
+    });
+    if (!eurobond) throw new NotFoundException('Eurobond not found');
+
+    return eurobond;
   }
 
-  async remove(userId: string, id: string) {
-    const eurobond = await this.prisma.eurobond.findFirst({
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.eurobond.deleteMany({
       where: { id, userId },
     });
-
-    if (!eurobond) return null;
-
-    return this.prisma.eurobond.delete({ where: { id } });
+    if (result.count === 0) throw new NotFoundException('Eurobond not found');
   }
 
   async getPortfolioSummary(userId: string) {
@@ -112,8 +109,12 @@ export class EurobondsService {
       (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
       0,
     );
+    const totalCost = eurobonds.reduce(
+      (sum, e) => sum + Number(e.purchasePrice) * Number(e.quantity),
+      0,
+    );
     const totalCurrentValue = eurobonds.reduce(
-      (sum, e) => sum + (Number(e.purchasePrice) * Number(e.quantity)) / 100,
+      (sum, e) => sum + Number(e.faceValue) * Number(e.quantity),
       0,
     );
     const annualCouponIncome = eurobonds.reduce(
@@ -125,6 +126,7 @@ export class EurobondsService {
     return {
       totalBonds: eurobonds.length,
       totalFaceValue,
+      totalCost,
       totalCurrentValue,
       annualCouponIncome,
       eurobonds: eurobonds.map((e) => ({
